@@ -1,7 +1,9 @@
 package structs
 
 type Song struct {
-	Id    string
-	Url   string
-	likes int32
+	Id      string
+	Url     string
+	Name    string
+	Picture string
+	Likes   int32
 }
