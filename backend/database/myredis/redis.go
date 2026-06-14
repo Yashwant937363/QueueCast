@@ -1,7 +1,8 @@
-package database
+package myredis
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -23,4 +24,13 @@ func ConnectRedis() error {
 	}
 	fmt.Printf("Connected successfully to Redis! Ping response: %s\n", pong)
 	return nil
+}
+
+func PublishJSON(ctx context.Context, channel string, payload any) error {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	return RDB.Publish(ctx, channel, data).Err()
 }

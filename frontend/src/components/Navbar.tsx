@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect } from "react";
-import { Outlet, useNavigate } from "react-router";
+import { Outlet } from "react-router";
 import { socket } from "../socket/socket";
 import { LogOut, Music } from "lucide-react";
 import { useAuth0 } from "@auth0/auth0-react";
@@ -9,6 +9,12 @@ import { syncUser } from "../store/slices/UserSlice";
 import { NavLink } from "react-router";
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import {
+  addClient,
+  leftClient,
+  setCurrentRoom,
+} from "../store/slices/RoomsSlice";
+import type { Room, RoomUser } from "../types/Room";
 
 const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -32,7 +38,7 @@ const Navbar: React.FC = () => {
       path: "/rooms",
     },
   ];
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const {
     loginWithRedirect,
     getAccessTokenSilently,
@@ -62,13 +68,50 @@ const Navbar: React.FC = () => {
     if (isAuthenticated) {
       setUserDetails();
     }
+    console.log("Authenticated: ", isAuthenticated);
   }, [isAuthenticated, user, dispatch]);
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       const message = JSON.parse(event.data);
 
+      interface RoomJoinedMessage {
+        event: "room-joined";
+        data: {
+          room: Room;
+        };
+      }
+      interface ClientJoinedMessage {
+        event: "client-joined";
+        message: {
+          client: RoomUser;
+        };
+      }
+      interface ClientLeftMessage {
+        event: "client-left";
+        message: {
+          auth0Id: string;
+        };
+      }
       if (message.event === "room-joined") {
-        console.log(message.data);
+        const data: RoomJoinedMessage = JSON.parse(event.data);
+        console.log(data.data.room);
+        dispatch(setCurrentRoom({ room: data.data.room }));
+      } else if (message.event === "client-joined") {
+        const data: ClientJoinedMessage = JSON.parse(event.data);
+        console.log(data.message.client);
+        dispatch(
+          addClient({
+            client: data.message.client,
+          }),
+        );
+      } else if (message.event === "client-left") {
+        const data: ClientLeftMessage = JSON.parse(event.data);
+        console.log("Client Left: ", data.message.auth0Id);
+        dispatch(
+          leftClient({
+            auth0Id: data.message.auth0Id,
+          }),
+        );
       }
     };
 

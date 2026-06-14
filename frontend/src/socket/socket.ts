@@ -17,6 +17,10 @@ interface JoinRoomReq {
 }
 
 export function joinRoom(req: JoinRoomReq) {
+  if (req.auth0Id === "") {
+    console.log("AuthID Required");
+    return;
+  }
   if (socket.readyState === WebSocket.OPEN) {
     socket.send(
       JSON.stringify({
