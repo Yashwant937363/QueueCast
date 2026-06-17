@@ -1,6 +1,28 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RoomSlice } from "../../types/store/RoomSlice";
 import type { Room, RoomUser } from "../../types/Room";
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
+
+const SERVER_URL = import.meta.env.VITE_SERVER_URL;
+
+export const getRooms = createAsyncThunk(
+  "rooms/getRooms",
+  async (_, thunkAPI) => {
+    try {
+      const response = await axios.get<{ rooms: Room[] }>(
+        `${SERVER_URL}/api/rooms`,
+      );
+
+      console.log("Rooms:", response.data.rooms);
+
+      return response.data.rooms;
+    } catch (error) {
+      console.error(error);
+      return thunkAPI.rejectWithValue("Failed to fetch rooms");
+    }
+  },
+);
 
 const initialState: RoomSlice = {
   currentRoom: null,
@@ -35,6 +57,19 @@ const roomSlice = createSlice({
         (client) => client.auth0Id !== action.payload.auth0Id,
       );
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(getRooms.pending, () => {
+        console.log("Loading rooms...");
+      })
+      .addCase(getRooms.fulfilled, (state, action) => {
+        state.publicRooms = action.payload.filter((room) => !room.isPrivate);
+        state.privateRooms = action.payload.filter((room) => room.isPrivate);
+      })
+      .addCase(getRooms.rejected, (_, action) => {
+        console.log("Error:", action.payload);
+      });
   },
 });
 

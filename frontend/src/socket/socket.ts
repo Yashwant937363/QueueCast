@@ -37,3 +37,16 @@ export function joinRoom(req: JoinRoomReq) {
     console.log("Socket not connected");
   }
 }
+
+export function leaveRoom() {
+  if (socket.readyState === WebSocket.OPEN) {
+    socket.send(
+      JSON.stringify({
+        event: Events.LeaveRoom,
+        message: {},
+      }),
+    );
+  } else {
+    console.log("Socket not connected");
+  }
+}

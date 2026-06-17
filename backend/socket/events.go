@@ -1,6 +1,7 @@
 package socket
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -10,12 +11,15 @@ import (
 )
 
 func joinRoom(conn *websocket.Conn, msg structs.WSMessage) {
+
 	var req structs.JoinRoomMessage
 	err := json.Unmarshal(msg.Message, &req)
 	if err != nil {
 		fmt.Println("Error converting json message:", err)
 		return
 	}
+	fmt.Println("Step 1: Got Data from Client")
+	fmt.Println("Data", req)
 
 	val, err := myredis.RDB.Get(ctx, "room:"+req.RoomId).Result()
 	if err != nil {
@@ -57,17 +61,14 @@ func joinRoom(conn *websocket.Conn, msg structs.WSMessage) {
 	}
 
 	if req.Auth0Id != "" {
-		Clients[conn] = &structs.Client{
-			Conn: conn,
-			Info: structs.ClientInfo{
-				Auth0Id: req.Auth0Id,
-				RoomId:  req.RoomId,
-			},
+		Clients[conn].Info = structs.ClientInfo{
+			Auth0Id: req.Auth0Id,
+			RoomId:  req.RoomId,
 		}
 
 	}
-
-	myredis.PublishJSON(ctx, "client-joined", structs.ClientJoinReq{
+	fmt.Println("Step 2: Publishing Client joined")
+	PublishJSON(ctx, "client-joined", structs.ClientJoinReq{
 		RoomId: req.RoomId,
 		Client: structs.RoomUser{
 			Auth0Id:  req.Auth0Id,
@@ -76,11 +77,49 @@ func joinRoom(conn *websocket.Conn, msg structs.WSMessage) {
 		},
 	})
 
-	err = conn.WriteJSON(map[string]any{
-		"event": "room-joined",
-		"data": map[string]any{
+	SendEvent(
+		Clients[conn],
+		"room-joined",
+		map[string]any{
 			"room":    room,
 			"message": "room-joined",
 		},
+	)
+}
+
+func PublishJSON(ctx context.Context, channel string, payload any) error {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	count, err := myredis.RDB.Publish(ctx, channel, data).Result()
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Published to %s, subscribers: %d\n", channel, count)
+
+	return nil
+}
+
+func SendEvent(client *structs.Client, event string, payload any) {
+	msgData, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+
+	wsData, err := json.Marshal(structs.WSMessage{
+		Event:   event,
+		Message: msgData,
 	})
+
+	if err != nil {
+		return
+	}
+
+	fmt.Println("Step 4: Got data for Sending")
+	fmt.Println("Data: ", wsData)
+
+	client.Send <- wsData
 }

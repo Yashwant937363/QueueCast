@@ -2,7 +2,7 @@ import RoomHeader from "../components/room/RoomHeader";
 import MusicPlayer from "../components/room/MusicPlayer";
 import QueueList from "../components/room/QueueList";
 import SearchPanel from "../components/room/SearchPanel";
-import MobilePlayerBar from "../components/room/MobilePlayerBar";
+
 import { useAuth0 } from "@auth0/auth0-react";
 import { useAppSelector } from "../store/hooks";
 import { useEffect } from "react";
@@ -32,31 +32,27 @@ export default function Room() {
       });
     }
   }, [isAuthenticated, isPending, isLoading]);
+  // useEffect(() => {
+  //   return () => leaveRoom();
+  // }, []);
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <RoomHeader />
-
       <div
         className="
-          grid
-          lg:grid-cols-[420px_1fr]
-          gap-8
-        "
+    grid
+    gap-8
+    lg:grid-cols-[420px_1fr]
+  "
       >
-        {/* Left */}
-
-        <div className="hidden lg:flex flex-col gap-6 sticky top-24 h-fit">
+        <div className="space-y-6">
           <MusicPlayer />
 
           <QueueList />
         </div>
 
-        {/* Right */}
-
         <SearchPanel />
       </div>
-
-      <MobilePlayerBar />
     </div>
   );
 }

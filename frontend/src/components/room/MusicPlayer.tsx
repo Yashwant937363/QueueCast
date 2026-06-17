@@ -7,21 +7,25 @@ export default function MusicPlayer() {
   return (
     <div
       className="
-        bg-slate-900
-        border border-slate-800
-        rounded-3xl
-        p-6
-      "
+    bg-slate-900
+    border
+    border-slate-800
+    rounded-3xl
+    p-6
+
+    lg:sticky
+    lg:top-24
+  "
     >
       <img
         src="https://picsum.photos/500"
         alt="cover"
         className="
-          w-full
-          aspect-square
-          rounded-2xl
-          object-cover
-        "
+    w-full
+    aspect-square
+    object-cover
+    rounded-2xl
+  "
       />
 
       <div className="mt-6 text-center">

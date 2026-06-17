@@ -11,8 +11,8 @@ export interface OtherRoom {
 
 export interface RoomSlice {
   currentRoom: Room | null;
-  publicRooms: OtherRoom[];
-  privateRooms: OtherRoom[];
+  publicRooms: Room[];
+  privateRooms: Room[];
   isCreating: boolean;
 }
 

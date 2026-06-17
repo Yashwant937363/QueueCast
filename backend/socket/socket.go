@@ -34,8 +34,11 @@ func WsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	Clients[conn] = &structs.Client{
 		Conn: conn,
+		Send: make(chan []byte, 256),
 		Info: structs.ClientInfo{},
 	}
+
+	go WritePump(Clients[conn])
 
 	defer disconnect(conn)
 	// Listen for incoming messages
@@ -57,24 +60,28 @@ func WsHandler(w http.ResponseWriter, r *http.Request) {
 
 		case "join-room":
 			joinRoom(conn, msg)
+		case "leave-room":
+			roomLeaved(conn)
 		case "add-song":
 
 		}
 
 		fmt.Printf("Received: %s\\n", message)
-		// Echo the message back to the client
-		if err := conn.WriteMessage(websocket.TextMessage, message); err != nil {
-			fmt.Println("Error writing message:")
-			break
-		}
 	}
 }
 
 func disconnect(conn *websocket.Conn) {
+	roomLeaved(conn)
+
+	delete(Clients, conn)
+	conn.Close()
+}
+
+func roomLeaved(conn *websocket.Conn) {
+
 	info := Clients[conn].Info
-
 	if info.Auth0Id != "" && info.RoomId != "" {
-
+		fmt.Println("Having Data")
 		val, err := myredis.RDB.Get(ctx, "room:"+info.RoomId).Result()
 		if err == nil {
 			var room structs.Room
@@ -95,7 +102,4 @@ func disconnect(conn *websocket.Conn) {
 		RoomId:  info.RoomId,
 		Auth0Id: info.Auth0Id,
 	})
-
-	delete(Clients, conn)
-	conn.Close()
 }

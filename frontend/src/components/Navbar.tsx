@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect } from "react";
-import { Outlet } from "react-router";
+import { Outlet, useNavigate } from "react-router";
 import { socket } from "../socket/socket";
 import { LogOut, Music } from "lucide-react";
 import { useAuth0 } from "@auth0/auth0-react";
@@ -15,10 +15,13 @@ import {
   setCurrentRoom,
 } from "../store/slices/RoomsSlice";
 import type { Room, RoomUser } from "../types/Room";
+import NotificationContainer from "./notifications/NotificationContainer";
+import { notify } from "../utils/notify";
 
 const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const commonProps = {
     strokeWidth: 2,
     strokeLinecap: "round" as const,
@@ -76,7 +79,7 @@ const Navbar: React.FC = () => {
 
       interface RoomJoinedMessage {
         event: "room-joined";
-        data: {
+        message: {
           room: Room;
         };
       }
@@ -94,8 +97,13 @@ const Navbar: React.FC = () => {
       }
       if (message.event === "room-joined") {
         const data: RoomJoinedMessage = JSON.parse(event.data);
-        console.log(data.data.room);
-        dispatch(setCurrentRoom({ room: data.data.room }));
+        dispatch(setCurrentRoom({ room: data.message.room }));
+        notify(
+          "success",
+          "Room Joined Successfully",
+          `Room Name: ${data.message.room.name}`,
+        );
+        navigate(`/room/${data.message.room.roomId}`);
       } else if (message.event === "client-joined") {
         const data: ClientJoinedMessage = JSON.parse(event.data);
         console.log(data.message.client);
@@ -333,6 +341,7 @@ const Navbar: React.FC = () => {
         </AnimatePresence>
       </nav>
       <Outlet></Outlet>
+      <NotificationContainer />
     </div>
   );
 };

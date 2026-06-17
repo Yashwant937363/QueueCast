@@ -1,9 +1,26 @@
 import { LogIn } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
+import { useAppSelector } from "../../store/hooks";
+import { joinRoom } from "../../socket/socket";
+
+import { notify } from "../../utils/notify";
 
 const JoinRoom = () => {
   const [roomId, setRoomId] = useState("");
+  const { auth0Id, picture, username } = useAppSelector((state) => state.user);
+  const handleJoinRoom = () => {
+    if (roomId.trim() === "") {
+      notify("warning", "Missing Room Id", "");
+      return;
+    }
+    joinRoom({
+      auth0Id,
+      picture,
+      roomId,
+      username,
+    });
+  };
   return (
     <div
       className="
@@ -50,6 +67,7 @@ const JoinRoom = () => {
                   rounded-xl
                   font-semibold
                 "
+        onClick={handleJoinRoom}
       >
         Join Room
       </motion.button>

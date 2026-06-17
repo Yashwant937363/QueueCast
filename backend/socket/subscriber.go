@@ -20,7 +20,7 @@ func StartRedisSubscriber() {
 
 	go func() {
 		for msg := range ch {
-			fmt.Println("Received:", msg.Payload)
+			fmt.Println("Received in Sub:", msg.Payload)
 
 			switch msg.Channel {
 			case "client-joined":
@@ -31,6 +31,8 @@ func StartRedisSubscriber() {
 					break
 				}
 
+				fmt.Println("Step 3: Got Data in Publisher")
+				fmt.Println("Data", req)
 				for _, client := range Clients {
 					if client.Info.RoomId == req.RoomId {
 						SendEvent(client, msg.Channel, structs.ClientJoinRes{
@@ -52,24 +54,18 @@ func StartRedisSubscriber() {
 							Auth0Id: req.Auth0Id,
 						})
 					}
+					if client.Info.Auth0Id == req.Auth0Id {
+						Clients[client.Conn] = &structs.Client{
+							Conn: client.Conn,
+							Send: make(chan []byte, 256),
+							Info: structs.ClientInfo{},
+						}
+					}
+
 				}
+
 			}
 
 		}
 	}()
-}
-
-func SendEvent(client *structs.Client, event string, payload any) {
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return
-	}
-
-	client.Mu.Lock()
-	defer client.Mu.Unlock()
-
-	client.Conn.WriteJSON(structs.WSMessage{
-		Event:   event,
-		Message: data,
-	})
 }

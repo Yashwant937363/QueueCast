@@ -2,7 +2,6 @@ package structs
 
 import (
 	"encoding/json"
-	"sync"
 
 	"github.com/gorilla/websocket"
 )
@@ -26,7 +25,7 @@ type WSMessage struct {
 
 type Client struct {
 	Conn *websocket.Conn
-	Mu   sync.Mutex
+	Send chan []byte
 	Info ClientInfo
 }
 

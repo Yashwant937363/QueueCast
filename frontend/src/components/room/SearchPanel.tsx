@@ -24,7 +24,7 @@ export default function SearchPanel() {
   }, [debouncedQuery]);
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-8 lg:block w-full min-w-0">
       <SearchBar value={query} onChange={setQuery} />
 
       {isSearching && <SearchTabs tab={tab} setTab={setTab} />}

@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { Lock, Globe, Users } from "lucide-react";
-import type Room from "../../types/Room";
+import { type Room } from "../../types/Room";
 
 const RoomCard = ({ room }: { room: Room }) => {
   return (
@@ -49,13 +49,13 @@ const RoomCard = ({ room }: { room: Room }) => {
       <div className="mt-4 space-y-2">
         <p className="text-slate-400 text-sm">Room ID</p>
 
-        <p className="font-mono text-violet-400">{room.id}</p>
+        <p className="font-mono text-violet-400">{room.roomId}</p>
 
         <div className="flex items-center gap-2 text-slate-300">
           <Users size={16} />
 
           <span>
-            {room.currentUsers} / {room.maxUsers}
+            {room.clients?.length} / {room.limit}
           </span>
         </div>
       </div>

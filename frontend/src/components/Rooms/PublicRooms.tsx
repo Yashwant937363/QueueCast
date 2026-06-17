@@ -1,30 +1,8 @@
-import type Room from "../../types/Room";
+import { useAppSelector } from "../../store/hooks";
 import RoomCard from "./RoomCard";
 
-const publicRooms: Room[] = [
-  {
-    id: "ROOM01",
-    name: "Office Chill",
-    currentUsers: 12,
-    maxUsers: 30,
-    isPrivate: false,
-  },
-  {
-    id: "ROOM02",
-    name: "Gaming Night",
-    currentUsers: 16,
-    maxUsers: 25,
-    isPrivate: false,
-  },
-  {
-    id: "ROOM03",
-    name: "EDM Lovers",
-    currentUsers: 22,
-    maxUsers: 50,
-    isPrivate: false,
-  },
-];
 const PublicRooms: React.FC = () => {
+  const publicRooms = useAppSelector((state) => state.rooms.publicRooms);
   return (
     <section>
       <div className="flex items-center gap-3 mb-5">
@@ -35,7 +13,7 @@ const PublicRooms: React.FC = () => {
 
       <div className="grid md:grid-cols-2 gap-4">
         {publicRooms.map((room) => (
-          <RoomCard key={room.id} room={room} />
+          <RoomCard key={room.roomId} room={room} />
         ))}
       </div>
     </section>

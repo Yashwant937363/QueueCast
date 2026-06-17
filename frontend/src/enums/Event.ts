@@ -2,6 +2,7 @@
 const Events = {
   CreateRoom: "create-room",
   JoinRoom: "join-room",
+  LeaveRoom: "leave-room",
 } as const;
 
 // 2. Export the value

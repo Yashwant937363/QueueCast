@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { X, Download, Share2, Copy } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import { useRef } from "react";
+import { notify } from "../../utils/notify";
 
 type Props = {
   open: boolean;
@@ -33,10 +34,12 @@ export default function QRCodeModal({ open, onClose, roomName }: Props) {
     link.click();
 
     document.body.removeChild(link);
+    notify("info", "Downloaded", "QR Code Image Downloaded");
   };
 
   const copyLink = async () => {
     await navigator.clipboard.writeText(roomUrl);
+    notify("info", "Copied", "Room link copied to clipboard");
   };
 
   const shareRoom = async () => {

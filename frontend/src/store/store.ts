@@ -1,11 +1,13 @@
 import { configureStore } from "@reduxjs/toolkit";
 import userSlice from "./slices/UserSlice";
 import roomSlice from "./slices/RoomsSlice";
+import notificationSlice from "./slices/NotificationSlice";
 
 export const store = configureStore({
   reducer: {
     user: userSlice,
     rooms: roomSlice,
+    notifications: notificationSlice,
   },
 });
 
