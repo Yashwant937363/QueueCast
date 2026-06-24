@@ -15,7 +15,6 @@ export default function Room() {
   const currentRoom = useAppSelector((state) => state.rooms.currentRoom);
   const { auth0Id, picture, username } = useAppSelector((state) => state.user);
   const { roomId } = useParams();
-  console.log("Room ID: ", roomId);
   useEffect(() => {
     if (
       isAuthenticated &&

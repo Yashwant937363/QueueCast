@@ -1,0 +1,25 @@
+/* QueueCast Scrollbar */
+
+.queue-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.queue-scrollbar::-webkit-scrollbar-track {
+  background: #0f172a; /* slate-900 */
+  border-radius: 999px;
+}
+
+.queue-scrollbar::-webkit-scrollbar-thumb {
+  background: #334155; /* slate-700 */
+  border-radius: 999px;
+}
+
+.queue-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #7c3aed; /* violet-600 */
+}
+
+/* Firefox */
+.queue-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 #0f172a;
+}

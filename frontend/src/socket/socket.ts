@@ -1,7 +1,8 @@
 import Events from "../enums/Event";
+import type { Song } from "../types/Song";
+import sendMessage from "./sendEvent";
 
 const SERVER_DOMAIN = import.meta.env.VITE_API_SERVER_DOMAIN;
-console.log(SERVER_DOMAIN);
 
 export const socket = new WebSocket(`ws://${SERVER_DOMAIN}/ws`);
 
@@ -17,36 +18,55 @@ interface JoinRoomReq {
 }
 
 export function joinRoom(req: JoinRoomReq) {
-  if (req.auth0Id === "") {
+  if (!req.auth0Id) {
+    console.log(req);
     console.log("AuthID Required");
     return;
   }
-  if (socket.readyState === WebSocket.OPEN) {
-    socket.send(
-      JSON.stringify({
-        event: Events.JoinRoom,
-        message: {
-          auth0Id: req.auth0Id,
-          roomId: req.roomId,
-          username: req.username,
-          picture: req.picture,
-        },
-      }),
-    );
-  } else {
-    console.log("Socket not connected");
-  }
+
+  sendMessage(Events.JoinRoom, {
+    auth0Id: req.auth0Id,
+    roomId: req.roomId,
+    username: req.username,
+    picture: req.picture,
+  });
 }
 
 export function leaveRoom() {
-  if (socket.readyState === WebSocket.OPEN) {
-    socket.send(
-      JSON.stringify({
-        event: Events.LeaveRoom,
-        message: {},
-      }),
-    );
-  } else {
-    console.log("Socket not connected");
-  }
+  sendMessage(Events.LeaveRoom, {});
+}
+
+export function addSong(song: Song) {
+  sendMessage(Events.AddSong, song);
+}
+
+interface LikeSongReq {
+  isLiked: boolean;
+  songId: string;
+}
+
+export function likeSong(req: LikeSongReq) {
+  sendMessage(Events.SongLiked, req);
+}
+
+export function reqNextSong(roomId: string) {
+  sendMessage(Events.NextSong, { roomId });
+}
+
+export function reqCurrentSong(roomId: string) {
+  sendMessage(Events.CurrentSong, { roomId });
+}
+
+export function updateMasterTime(req: {
+  roomId: string;
+  masterTime: {
+    currentTime: number;
+    date: number;
+    duration: number;
+  };
+}) {
+  sendMessage(Events.UpdateMasterTime, req);
+}
+export function updatePlayState(playing: boolean) {
+  sendMessage(Events.UpdatePlayState, { playing });
 }

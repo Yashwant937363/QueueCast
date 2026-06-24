@@ -30,6 +30,28 @@ type Client struct {
 }
 
 type ClientInfo struct {
-	Auth0Id string
-	RoomId  string
+	Auth0Id string `json:"auth0Id"`
+	RoomId  string `json:"roomId"`
+}
+
+type LikeSongMessage struct {
+	SongId  string `json:"songId"`
+	IsLiked bool   `json:"isLiked"`
+}
+
+type CurrentSongMessage struct {
+	RoomId string `json:"roomId"`
+}
+
+type NextSongMessage struct {
+	RoomId string `json:"roomId"`
+}
+
+type UpdateMasterTime struct {
+	MasterTime MasterTime `json:"masterTime"`
+	RoomId     string     `json:"roomId"`
+}
+
+type UpdatePlayingState struct {
+	Playing bool `json:"playing"`
 }

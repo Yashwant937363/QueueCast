@@ -1,11 +1,16 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { notify } from "../../utils/notify";
+import SongCard from "./SongCard";
+import type { Song } from "../../types/Song";
+import type { JioSaavnSong } from "../../types/JioSaavnSong";
+import { decode } from "he";
+import { SongCardSkeleton } from "./SongCardSkeleton";
 
 const SAAVAN_DOMAIN = import.meta.env.VITE_JIO_SAAVAN_DOMAIN;
 
 export default function TrendingSongs() {
-  const [songs, setSongs] = useState<any[]>([]);
+  const [songs, setSongs] = useState<Song[]>([]);
   const [isPending, setPending] = useState(false);
   const [error, setError] = useState(false);
   const getSongs = async () => {
@@ -21,7 +26,18 @@ export default function TrendingSongs() {
         `${SAAVAN_DOMAIN}/api/playlists?id=${response.data.data.results[1].id}`,
       );
 
-      setSongs(playlist.data.data.songs);
+      const treandingSongs = playlist.data.data.songs.map(
+        (song: JioSaavnSong) => ({
+          id: song.id,
+          likes: 0,
+          name: decode(song.name),
+          picture: song.image[song.image.length - 2].url,
+          source: "jiosaavn" as const,
+          url: song.downloadUrl[song.downloadUrl.length - 1].url,
+        }),
+      );
+
+      setSongs(treandingSongs);
     } catch (err) {
       console.error(err);
 
@@ -47,10 +63,10 @@ export default function TrendingSongs() {
         🔥 Trending Today
       </h2>
 
-      <div className="flex gap-4 overflow-x-auto pb-2">
+      <div className="space-y-3 grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
         {isPending ? (
-          Array.from({ length: 5 }).map((_, index) => (
-            <TrendingSongSkeleton key={index} />
+          Array.from({ length: 10 }).map((_, index) => (
+            <SongCardSkeleton key={index} />
           ))
         ) : error ? (
           <div
@@ -100,75 +116,9 @@ export default function TrendingSongs() {
             No songs available.
           </div>
         ) : (
-          songs.map((song) => (
-            <div
-              key={song.id}
-              className="
-          w-45
-          shrink-0
-          bg-slate-900
-          rounded-2xl
-          p-3
-        "
-            >
-              <img
-                src={song.image[1].url}
-                className="
-            h-36
-            w-full
-            rounded-xl
-            object-cover
-          "
-              />
-
-              <h3 className="mt-3 truncate">{song.name}</h3>
-            </div>
-          ))
+          songs.map((song) => <SongCard key={song.id} song={song} />)
         )}
       </div>
     </>
-  );
-}
-
-function TrendingSongSkeleton() {
-  return (
-    <div
-      className="
-        w-45
-        shrink-0
-        bg-slate-900
-        rounded-2xl
-        p-3
-        animate-pulse
-      "
-    >
-      <div
-        className="
-          h-36
-          w-full
-          rounded-xl
-          bg-slate-800
-        "
-      />
-
-      <div
-        className="
-          mt-3
-          h-4
-          rounded
-          bg-slate-800
-        "
-      />
-
-      <div
-        className="
-          mt-2
-          h-3
-          w-3/4
-          rounded
-          bg-slate-800
-        "
-      />
-    </div>
   );
 }

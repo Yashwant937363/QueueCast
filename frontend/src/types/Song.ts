@@ -4,4 +4,6 @@ export interface Song {
   name: string;
   picture: string;
   likes: number;
+  source: "youtube" | "jiosaavn";
+  isLiked: boolean;
 }

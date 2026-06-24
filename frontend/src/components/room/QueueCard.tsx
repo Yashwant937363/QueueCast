@@ -1,12 +1,27 @@
 import { Heart } from "lucide-react";
-import type { QueueSong } from "../../types/music";
+import type { Song } from "../../types/Song";
+import { useAppDispatch } from "../../store/hooks";
+import { setSongLiked } from "../../store/slices/RoomsSlice";
+import { likeSong } from "../../socket/socket";
 
 type Props = {
-  song: QueueSong;
+  song: Song;
 };
 
 export default function QueueCard({ song }: Props) {
-  console.log(song.image);
+  const dispatch = useAppDispatch();
+  const handleLike = () => {
+    dispatch(
+      setSongLiked({
+        isLiked: !song.isLiked,
+        songId: song.id,
+      }),
+    );
+    likeSong({
+      isLiked: !song.isLiked,
+      songId: song.id,
+    });
+  };
   return (
     <div
       className="
@@ -21,8 +36,8 @@ export default function QueueCard({ song }: Props) {
       <div className="flex items-center gap-3">
         {/* Album Art */}
         <img
-          src={song.image}
-          alt={song.title}
+          src={song.picture}
+          alt={song.name}
           className="
             w-14
             h-14
@@ -34,9 +49,7 @@ export default function QueueCard({ song }: Props) {
 
         {/* Song Info */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-medium truncate">{song.title}</h3>
-
-          <p className="text-sm text-slate-400 truncate">{song.artist}</p>
+          <h3 className="font-medium truncate">{song.name}</h3>
         </div>
 
         {/* Votes */}
@@ -49,10 +62,11 @@ export default function QueueCard({ song }: Props) {
             hover:scale-110
             transition
           "
+          onClick={handleLike}
         >
-          <Heart size={16} fill="currentColor" />
+          <Heart size={16} fill={song.isLiked ? "currentColor" : ""} />
 
-          <span>{song.votes}</span>
+          <span>{song.likes}</span>
         </button>
       </div>
     </div>

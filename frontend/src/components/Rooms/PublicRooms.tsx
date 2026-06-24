@@ -1,4 +1,5 @@
 import { useAppSelector } from "../../store/hooks";
+import NothingSection from "../NothingSection";
 import RoomCard from "./RoomCard";
 
 const PublicRooms: React.FC = () => {
@@ -11,11 +12,15 @@ const PublicRooms: React.FC = () => {
         <h2 className="text-2xl font-semibold">Public Rooms</h2>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4">
-        {publicRooms.map((room) => (
-          <RoomCard key={room.roomId} room={room} />
-        ))}
-      </div>
+      {publicRooms.length === 0 ? (
+        <NothingSection message="no rooms" />
+      ) : (
+        <div className="grid md:grid-cols-2 gap-4">
+          {publicRooms.map((room) => (
+            <RoomCard key={room.roomId} room={room} />
+          ))}
+        </div>
+      )}
     </section>
   );
 };

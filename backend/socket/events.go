@@ -1,8 +1,8 @@
 package socket
 
 import (
-	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/Yashwant937363/QueueCast/backend/database/myredis"
@@ -19,18 +19,11 @@ func joinRoom(conn *websocket.Conn, msg structs.WSMessage) {
 		return
 	}
 	fmt.Println("Step 1: Got Data from Client")
-	fmt.Println("Data", req)
 
-	val, err := myredis.RDB.Get(ctx, "room:"+req.RoomId).Result()
+	room, err := GetRoom(req.RoomId)
 	if err != nil {
-		fmt.Println("Redis Reading Error", err)
-	}
-
-	var room structs.Room
-
-	err = json.Unmarshal([]byte(val), &room)
-	if err != nil {
-		fmt.Println("Error converting json message:", err)
+		SendError(Clients[conn], "Join Room", "Room Doesn't Exist", "", "")
+		return
 	}
 
 	exists := false
@@ -50,14 +43,11 @@ func joinRoom(conn *websocket.Conn, msg structs.WSMessage) {
 		})
 	}
 
-	data, err := json.Marshal(room)
-	if err != nil {
-		fmt.Println("Converting Object to JSON:", err)
-	}
-
-	err = myredis.RDB.Set(ctx, "room:"+req.RoomId, data, 0).Err()
+	err = SaveRoom(room)
 	if err != nil {
 		fmt.Println("Error while while saving data:", err)
+		SendError(Clients[conn], "Join Room", "Something Went Wrong While Creating Room", "", "")
+		return
 	}
 
 	if req.Auth0Id != "" {
@@ -68,6 +58,16 @@ func joinRoom(conn *websocket.Conn, msg structs.WSMessage) {
 
 	}
 	fmt.Println("Step 2: Publishing Client joined")
+	for i := range room.Songs {
+		liked, _ := myredis.RDB.SIsMember(
+			ctx,
+			"room:"+req.RoomId+":song:"+room.Songs[i].Id+":likes",
+			req.Auth0Id,
+		).Result()
+
+		room.Songs[i].IsLiked = liked
+	}
+
 	PublishJSON(ctx, "client-joined", structs.ClientJoinReq{
 		RoomId: req.RoomId,
 		Client: structs.RoomUser{
@@ -87,39 +87,195 @@ func joinRoom(conn *websocket.Conn, msg structs.WSMessage) {
 	)
 }
 
-func PublishJSON(ctx context.Context, channel string, payload any) error {
-	data, err := json.Marshal(payload)
+func addSong(conn *websocket.Conn, msg structs.WSMessage) {
+	var newSong structs.Song
+	err := json.Unmarshal(msg.Message, &newSong)
 	if err != nil {
-		return err
+		fmt.Println("Something went wrong while ummarshaling json for song")
 	}
 
-	count, err := myredis.RDB.Publish(ctx, channel, data).Result()
+	client := Clients[conn]
+
+	room, err := GetRoom(client.Info.RoomId)
 	if err != nil {
-		return err
-	}
-
-	fmt.Printf("Published to %s, subscribers: %d\n", channel, count)
-
-	return nil
-}
-
-func SendEvent(client *structs.Client, event string, payload any) {
-	msgData, err := json.Marshal(payload)
-	if err != nil {
+		SendError(Clients[conn], "Join Room", "Room Doesn't Exist", "", "")
 		return
 	}
 
-	wsData, err := json.Marshal(structs.WSMessage{
-		Event:   event,
-		Message: msgData,
+	_, exists := FindSong(room, newSong.Id)
+
+	if !exists && newSong.Id != "" {
+		room.Songs = append(room.Songs, newSong)
+	} else {
+		SendError(client, "Adding Song", "song already exists", "add-song", newSong.Id)
+		return
+	}
+
+	err = SaveRoom(room)
+	if err != nil {
+		fmt.Println("Error while while saving data:", err)
+		SendError(Clients[conn], "Add Song", "Something Went Wrong Adding Song", "", "")
+		return
+	}
+
+	fmt.Println("Step 2: Publishing Song Added")
+	PublishJSON(ctx, "song-added", structs.SongAddedReq{
+		RoomId: client.Info.RoomId,
+		Song:   newSong,
 	})
 
+}
+
+func currentSong(conn *websocket.Conn, msg structs.WSMessage) {
+	var req structs.CurrentSongMessage
+	err := json.Unmarshal(msg.Message, &req)
 	if err != nil {
+		fmt.Println("Error converting json message:", err)
+		return
+	}
+	client := Clients[conn]
+	room, err := GetRoom(client.Info.RoomId)
+	if err != nil {
+		SendError(Clients[conn], "Join Room", "Room Doesn't Exist", "", "")
 		return
 	}
 
-	fmt.Println("Step 4: Got data for Sending")
-	fmt.Println("Data: ", wsData)
+	val, err := GetNowPlaying(client.Info.RoomId)
+	var nowPlaying *structs.NowPlaying
 
-	client.Send <- wsData
+	if err != nil {
+		if errors.Is(err, ErrEmptyRedis) {
+			if room.Owner.Auth0Id == client.Info.Auth0Id {
+				nowPlaying, err = GetNextSong(room)
+			} else {
+				SendError(client, "Current Song", err.Error(), "", "")
+
+			}
+		} else {
+			SendError(client, "Current Song", err.Error(), "", "")
+		}
+	} else {
+		nowPlaying = val
+	}
+
+	SendEvent(client, "current-song", nowPlaying)
+}
+
+func updatePlayingState(conn *websocket.Conn, msg structs.WSMessage) {
+	var req structs.UpdatePlayingState
+	err := json.Unmarshal(msg.Message, &req)
+	if err != nil {
+		fmt.Println("Error converting json message:", err)
+		return
+	}
+	client := Clients[conn]
+	nowPlaying, err := GetNowPlaying(client.Info.RoomId)
+	if err != nil {
+		fmt.Println(client.Info.RoomId + "Error Update Playing State: " + err.Error())
+		return
+	}
+
+	nowPlaying.Playing = req.Playing
+
+	nowPlayingKey := "room:" + client.Info.RoomId + ":now-playing"
+	data, _ := json.Marshal(nowPlaying)
+
+	myredis.RDB.Set(ctx, nowPlayingKey, data, 0)
+
+	PublishJSON(ctx, "update-player-state", structs.UpdatePlayingStateReq{
+		RoomId:  client.Info.RoomId,
+		Playing: req.Playing,
+	})
+}
+
+func updateMasterTime(msg structs.WSMessage) {
+	var req structs.UpdateMasterTime
+	err := json.Unmarshal(msg.Message, &req)
+	if err != nil {
+		fmt.Println("Error converting json message:", err)
+		return
+	}
+
+	nowPlaying, err := GetNowPlaying(req.RoomId)
+
+	if err != nil {
+		fmt.Println(req.RoomId + "Error Update Master Time: " + err.Error())
+		return
+	}
+
+	nowPlaying.MasterTime = req.MasterTime
+
+	nowPlayingKey := "room:" + req.RoomId + ":now-playing"
+	data, _ := json.Marshal(nowPlaying)
+
+	myredis.RDB.Set(ctx, nowPlayingKey, data, 0)
+	PublishJSON(ctx, "update-master-time", req)
+}
+
+func nextSong(conn *websocket.Conn, msg structs.WSMessage) {
+	var req structs.NextSongMessage
+	err := json.Unmarshal(msg.Message, &req)
+	if err != nil {
+		fmt.Println("Error converting json message:", err)
+		return
+	}
+	client := Clients[conn]
+
+	room, err := GetRoom(client.Info.RoomId)
+	if err != nil {
+		SendError(Clients[conn], "Join Room", "Room Doesn't Exist", "", "")
+		return
+	}
+	nowPlaying, err := GetNextSong(room)
+	if err != nil {
+		SendError(client, "Next Song", err.Error(), "", "")
+	}
+
+	SendEvent(client, "next-song", nowPlaying.Song)
+}
+
+func setSongLiked(conn *websocket.Conn, msg structs.WSMessage) {
+	var likeSongMessage structs.LikeSongMessage
+	err := json.Unmarshal(msg.Message, &likeSongMessage)
+	if err != nil {
+		fmt.Println("Something went wrong while ummarshaling json for like")
+	}
+	client := Clients[conn]
+	room, err := GetRoom(client.Info.RoomId)
+	if err != nil {
+		SendError(Clients[conn], "Song Like", "Room Doesn't Exist", "", "")
+		return
+	}
+
+	song, exists := FindSong(room, likeSongMessage.SongId)
+
+	if !exists {
+		SendError(client, "Like Song", "song doesn't exists", "like-song", "")
+		return
+	}
+
+	likeKey := "room:" + client.Info.RoomId + ":song:" + likeSongMessage.SongId + ":likes"
+
+	if likeSongMessage.IsLiked {
+		myredis.RDB.SAdd(ctx, likeKey, client.Info.Auth0Id)
+	} else {
+		myredis.RDB.SRem(ctx, likeKey, client.Info.Auth0Id)
+	}
+
+	count, err := myredis.RDB.SCard(ctx, likeKey).Result()
+
+	song.Likes = int32(count)
+
+	err = SaveRoom(room)
+	if err != nil {
+		fmt.Println("Error while while saving data:", err)
+		SendError(Clients[conn], "Like Song", "Something Went Wrong While Like Song", "", "")
+		return
+	}
+
+	PublishJSON(ctx, "like-song", structs.LikeSongReq{
+		Likes:  count,
+		RoomId: room.RoomId,
+		SongId: likeSongMessage.SongId,
+	})
 }

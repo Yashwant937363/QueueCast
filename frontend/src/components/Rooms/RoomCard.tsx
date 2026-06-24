@@ -1,8 +1,19 @@
 import { motion } from "motion/react";
 import { Lock, Globe, Users } from "lucide-react";
 import { type Room } from "../../types/Room";
+import { useAppSelector } from "../../store/hooks";
+import { joinRoom } from "../../socket/socket";
 
 const RoomCard = ({ room }: { room: Room }) => {
+  const { auth0Id, picture, username } = useAppSelector((state) => state.user);
+  const handleJoinRoom = () => {
+    joinRoom({
+      auth0Id,
+      picture,
+      roomId: room.roomId,
+      username,
+    });
+  };
   return (
     <motion.div
       whileHover={{
@@ -18,6 +29,9 @@ const RoomCard = ({ room }: { room: Room }) => {
         border-slate-800
         rounded-2xl
         p-5
+        flex
+        flex-col
+        justify-between
       "
     >
       <div className="flex items-center justify-between">
@@ -61,6 +75,7 @@ const RoomCard = ({ room }: { room: Room }) => {
       </div>
 
       <motion.button
+        onClick={handleJoinRoom}
         whileHover={{
           scale: 1.03,
         }}

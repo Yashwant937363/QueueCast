@@ -14,6 +14,7 @@ const JoinRoom = () => {
       notify("warning", "Missing Room Id", "");
       return;
     }
+    console.log("calling join room");
     joinRoom({
       auth0Id,
       picture,

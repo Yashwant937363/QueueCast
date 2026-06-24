@@ -63,7 +63,17 @@ func WsHandler(w http.ResponseWriter, r *http.Request) {
 		case "leave-room":
 			roomLeaved(conn)
 		case "add-song":
-
+			addSong(conn, msg)
+		case "song-liked":
+			setSongLiked(conn, msg)
+		case "next-song":
+			nextSong(conn, msg)
+		case "current-song":
+			currentSong(conn, msg)
+		case "update-master-time":
+			updateMasterTime(msg)
+		case "update-player-state":
+			updatePlayingState(conn, msg)
 		}
 
 		fmt.Printf("Received: %s\\n", message)

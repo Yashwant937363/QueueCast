@@ -14,14 +14,18 @@ func StartRedisSubscriber() {
 		context.Background(),
 		"client-joined",
 		"client-left",
+		"song-added",
+		"like-song",
+		"new-room",
+		"update-master-time",
+		"update-player-state",
 	)
 
 	ch := pubsub.Channel()
 
 	go func() {
 		for msg := range ch {
-			fmt.Println("Received in Sub:", msg.Payload)
-
+			fmt.Println("Step 3: Got Data in Publisher")
 			switch msg.Channel {
 			case "client-joined":
 				var req structs.ClientJoinReq
@@ -31,8 +35,6 @@ func StartRedisSubscriber() {
 					break
 				}
 
-				fmt.Println("Step 3: Got Data in Publisher")
-				fmt.Println("Data", req)
 				for _, client := range Clients {
 					if client.Info.RoomId == req.RoomId {
 						SendEvent(client, msg.Channel, structs.ClientJoinRes{
@@ -64,6 +66,80 @@ func StartRedisSubscriber() {
 
 				}
 
+			case "song-added":
+				var req structs.SongAddedReq
+				fmt.Println("Step 3: Got Song from Publisher")
+				err := json.Unmarshal([]byte(msg.Payload), &req)
+				if err != nil {
+					fmt.Println("Error converting json message:", err)
+					break
+				}
+
+				for _, client := range Clients {
+					if client.Info.RoomId == req.RoomId {
+						SendEvent(client, msg.Channel, req.Song)
+					}
+				}
+			case "like-song":
+				var req structs.LikeSongReq
+				fmt.Println("Step 3: Got Like from Publisher")
+				err := json.Unmarshal([]byte(msg.Payload), &req)
+				if err != nil {
+					fmt.Println("Error converting json message:", err)
+					break
+				}
+
+				for _, client := range Clients {
+					if client.Info.RoomId == req.RoomId {
+						SendEvent(client, msg.Channel, structs.LikeSongRes{
+							Likes:  req.Likes,
+							SongId: req.SongId,
+						})
+					}
+				}
+			case "new-room":
+				var req structs.NewRoomReq
+				fmt.Println("Step 3: Got Like from Publisher")
+				err := json.Unmarshal([]byte(msg.Payload), &req)
+				if err != nil {
+					fmt.Println("Error converting json message:", err)
+					break
+				}
+
+				for _, client := range Clients {
+					SendEvent(client, msg.Channel, structs.NewRoomRes{
+						Room: req.Room,
+					})
+				}
+			case "update-master-time":
+				var req structs.UpdateMasterTime
+				fmt.Println("Step 3: Got Master Time from Publisher")
+				err := json.Unmarshal([]byte(msg.Payload), &req)
+				if err != nil {
+					fmt.Println("Error converting json message:", err)
+					break
+				}
+
+				for _, client := range Clients {
+					if client.Info.RoomId == req.RoomId {
+						SendEvent(client, msg.Channel, req.MasterTime)
+					}
+				}
+
+			case "update-player-state":
+				var req structs.UpdatePlayingStateReq
+				fmt.Println("Step 3: Got Playing State from Publisher")
+				err := json.Unmarshal([]byte(msg.Payload), &req)
+				if err != nil {
+					fmt.Println("Error converting json message:", err)
+					break
+				}
+
+				for _, client := range Clients {
+					if client.Info.RoomId == req.RoomId {
+						SendEvent(client, msg.Channel, req.Playing)
+					}
+				}
 			}
 
 		}

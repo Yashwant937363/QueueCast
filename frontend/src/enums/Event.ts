@@ -3,6 +3,12 @@ const Events = {
   CreateRoom: "create-room",
   JoinRoom: "join-room",
   LeaveRoom: "leave-room",
+  AddSong: "add-song",
+  SongLiked: "song-liked",
+  CurrentSong: "current-song",
+  NextSong: "next-song",
+  UpdateMasterTime: "update-master-time",
+  UpdatePlayState: "update-player-state",
 } as const;
 
 // 2. Export the value

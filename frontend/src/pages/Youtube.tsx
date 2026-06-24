@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import YouTubePlayer from "youtube-player";
 
 interface Video {
   id: {
@@ -80,17 +81,7 @@ function Youtube() {
 
       {loading && <p>Searching...</p>}
 
-      {selectedVideo && (
-        <div style={{ marginTop: 20 }}>
-          <iframe
-            width="100%"
-            height="500"
-            src={`https://www.youtube.com/embed/${selectedVideo}`}
-            title="YouTube player"
-            allowFullScreen
-          />
-        </div>
-      )}
+      {selectedVideo && <MusicPlayer videoId={selectedVideo} />}
 
       <div
         style={{
@@ -125,6 +116,96 @@ function Youtube() {
         ))}
       </div>
     </div>
+  );
+}
+
+function MusicPlayer({ videoId }: { videoId: string }) {
+  const playerRef = useRef<any>(null);
+
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+
+  useEffect(() => {
+    if (!videoId) return;
+
+    if (!playerRef.current) {
+      playerRef.current = YouTubePlayer("youtube-player");
+    }
+
+    playerRef.current.loadVideoById(videoId);
+
+    const interval = setInterval(async () => {
+      if (playerRef.current) {
+        const current = await playerRef.current.getCurrentTime();
+        const total = await playerRef.current.getDuration();
+
+        setCurrentTime(current);
+        setDuration(total);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [videoId]);
+
+  const play = () => playerRef.current?.playVideo();
+
+  const pause = () => playerRef.current?.pauseVideo();
+
+  const forward = async () => {
+    const time = await playerRef.current.getCurrentTime();
+    playerRef.current.seekTo(time + 10, true);
+  };
+
+  const backward = async () => {
+    const time = await playerRef.current.getCurrentTime();
+    playerRef.current.seekTo(Math.max(time - 10, 0), true);
+  };
+
+  const seek = (value: number) => {
+    playerRef.current.seekTo(value, true);
+  };
+
+  return (
+    <>
+      {/* Hidden Player */}
+      <div
+        id="youtube-player"
+        style={{
+          width: 1,
+          height: 1,
+          overflow: "hidden",
+          position: "absolute",
+        }}
+      />
+
+      <div
+        style={{
+          padding: 20,
+          border: "1px solid #ddd",
+          borderRadius: 10,
+        }}
+      >
+        <input
+          type="range"
+          min={0}
+          max={duration}
+          value={currentTime}
+          onChange={(e) => seek(Number(e.target.value))}
+          style={{ width: "100%" }}
+        />
+
+        <p>
+          {Math.floor(currentTime)} / {Math.floor(duration)} sec
+        </p>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={backward}>⏪ 10s</button>
+          <button onClick={play}>▶️</button>
+          <button onClick={pause}>⏸️</button>
+          <button onClick={forward}>⏩ 10s</button>
+        </div>
+      </div>
+    </>
   );
 }
 

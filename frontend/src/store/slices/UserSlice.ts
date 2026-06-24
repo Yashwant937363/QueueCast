@@ -1,14 +1,9 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
+import type SyncUserReq from "../../types/store/UserSlice/SyncUserReq";
+import type UserSlice from "../../types/store/UserSlice/UserSlice";
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL;
-
-interface SyncUserReq {
-  token: string;
-  username: string;
-  email: string;
-  picture: string;
-}
 
 export const syncUser = createAsyncThunk(
   "syncUser",
@@ -37,15 +32,6 @@ export const syncUser = createAsyncThunk(
     };
   },
 );
-
-interface UserSlice {
-  auth0Id: string;
-  email: string;
-  username: string;
-  picture: string;
-  isAuthenticated: boolean;
-  isPending: boolean;
-}
 
 const initialState: UserSlice = {
   auth0Id: "",

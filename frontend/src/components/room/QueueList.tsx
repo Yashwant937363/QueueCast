@@ -1,37 +1,15 @@
 import QueueCard from "./QueueCard";
-import type { QueueSong } from "../../types/music";
-
-const queue: QueueSong[] = [
-  {
-    id: "1",
-    title: "Believer",
-    artist: "Imagine Dragons",
-    image: "https://picsum.photos/300?1",
-    votes: 24,
-    source: "jiosaavn",
-    position: 1,
-  },
-  {
-    id: "2",
-    title: "Heat Waves",
-    artist: "Glass Animals",
-    image: "https://picsum.photos/300?2",
-    votes: 19,
-    source: "jiosaavn",
-    position: 2,
-  },
-  {
-    id: "3",
-    title: "Starboy",
-    artist: "The Weeknd",
-    image: "https://picsum.photos/300?3",
-    votes: 17,
-    source: "youtube",
-    position: 3,
-  },
-];
+import { useAppSelector } from "../../store/hooks";
+import "./QueueList.css";
+import { motion } from "motion/react";
+import NothingSection from "../NothingSection";
 
 export default function QueueList() {
+  const currentRoom = useAppSelector((state) => state.rooms.currentRoom);
+  const sortedSongs =
+    currentRoom && currentRoom.songs
+      ? [...currentRoom.songs].sort((a, b) => b.likes - a.likes)
+      : [];
   return (
     <div
       className="
@@ -50,11 +28,26 @@ export default function QueueList() {
           space-y-3
           overflow-y-auto
           max-h-125
+          queue-scrollbar
         "
       >
-        {queue.map((song) => (
-          <QueueCard key={song.id} song={song} />
-        ))}
+        {sortedSongs.length === 0 ? (
+          <NothingSection message="No Songs" />
+        ) : (
+          sortedSongs.map((song) => (
+            <motion.div
+              key={song.id}
+              layout
+              transition={{
+                type: "spring",
+                stiffness: 300,
+                damping: 30,
+              }}
+            >
+              <QueueCard song={song} />
+            </motion.div>
+          ))
+        )}
       </div>
     </div>
   );

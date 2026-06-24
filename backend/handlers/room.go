@@ -90,7 +90,7 @@ func CreateRoom(c *gin.Context) {
 
 	newRoom := structs.Room{
 		Name:         body.RoomDetails.Name,
-		Owner:        structs.RoomUser{Auth0Id: auth0Id, Username: body.RoomDetails.Name, Picture: &body.User.Picture},
+		Owner:        structs.RoomUser{Auth0Id: auth0Id, Username: body.User.Name, Picture: &body.User.Picture},
 		RoomId:       roomId,
 		Limit:        body.RoomDetails.Limit,
 		IsPrivate:    body.RoomDetails.IsPrivate,
@@ -101,6 +101,11 @@ func CreateRoom(c *gin.Context) {
 	data, _ := json.Marshal(newRoom)
 	myredis.RDB.Set(ctx, "room:"+roomId, data, 0)
 	myredis.RDB.SAdd(ctx, "rooms", newRoom.RoomId)
+
+	myredis.PublishJSON(ctx, "new-room", structs.NewRoomReq{
+		Room: newRoom,
+	})
+
 	c.JSON(201, gin.H{
 		"message": "room created",
 		"roomId":  roomId,

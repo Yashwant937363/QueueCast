@@ -4,27 +4,46 @@ import { Outlet, useNavigate } from "react-router";
 import { socket } from "../socket/socket";
 import { LogOut, Music } from "lucide-react";
 import { useAuth0 } from "@auth0/auth0-react";
-import { useAppDispatch } from "../store/hooks";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { syncUser } from "../store/slices/UserSlice";
 import { NavLink } from "react-router";
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   addClient,
+  addNewRoom,
+  addSong,
   leftClient,
+  removeSongFromWaiting,
+  setCurrentPlaying,
   setCurrentRoom,
+  setMasterTime,
+  setSongLikes,
 } from "../store/slices/RoomsSlice";
 import type { Room, RoomUser } from "../types/Room";
 import NotificationContainer from "./notifications/NotificationContainer";
 import { notify } from "../utils/notify";
+import type { Song } from "../types/Song";
+import Events from "../enums/Event";
+import { setLoading, setPlayingState } from "../store/slices/PlayerSlice";
+import type { MasterTime, NowPlaying } from "../types/NowPlaying";
 
 const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const commonProps = {
+  const currentRoom = useAppSelector((state) => state.rooms.currentRoom);
+  const { auth0Id } = useAppSelector((state) => state.user);
+  const animatedLineProps = {
+    stroke: "currentColor",
     strokeWidth: 2,
     strokeLinecap: "round" as const,
+    style: {
+      transformOrigin: "12px 12px",
+    },
+    transition: {
+      duration: 0.25,
+    },
   };
 
   const navItems = [
@@ -71,7 +90,6 @@ const Navbar: React.FC = () => {
     if (isAuthenticated) {
       setUserDetails();
     }
-    console.log("Authenticated: ", isAuthenticated);
   }, [isAuthenticated, user, dispatch]);
   useEffect(() => {
     const handler = (event: MessageEvent) => {
@@ -95,6 +113,54 @@ const Navbar: React.FC = () => {
           auth0Id: string;
         };
       }
+      interface ErrorMessage {
+        event: "error";
+        message: {
+          title: string;
+          message: string;
+          event: string;
+          data: {
+            id: string;
+          };
+        };
+      }
+      interface SongAdded {
+        event: "song-added";
+        message: Song;
+      }
+      interface SongLikes {
+        event: "like-song";
+        message: {
+          likes: number;
+          songId: string;
+        };
+      }
+      interface NewRoom {
+        event: "new-room";
+        message: {
+          room: Room;
+        };
+      }
+      interface NextSong {
+        event: "next-song";
+        message: Song;
+      }
+      interface SocketNowPlaying extends NowPlaying {
+        playing: boolean;
+      }
+      interface CurrentSong {
+        event: "current-song";
+        message: SocketNowPlaying;
+      }
+      interface UpdateMasterTime {
+        event: "update-master-time";
+        message: MasterTime;
+      }
+      interface UpdatePlayerState {
+        event: "update-master-time";
+        message: boolean;
+      }
+
       if (message.event === "room-joined") {
         const data: RoomJoinedMessage = JSON.parse(event.data);
         dispatch(setCurrentRoom({ room: data.message.room }));
@@ -120,6 +186,58 @@ const Navbar: React.FC = () => {
             auth0Id: data.message.auth0Id,
           }),
         );
+      } else if (message.event === "error") {
+        const data: ErrorMessage = JSON.parse(event.data);
+        console.log("WS Error From Server: ", data.message);
+        notify("error", data.message.title, data.message.message);
+        if (data.message.event === Events.AddSong) {
+          dispatch(removeSongFromWaiting(data.message.data.id));
+        }
+      } else if (message.event === "song-added") {
+        const data: SongAdded = JSON.parse(event.data);
+        dispatch(addSong(data.message));
+        notify("success", "Song Added", "Name :" + data.message.name);
+      } else if (message.event === "like-song") {
+        const data: SongLikes = JSON.parse(event.data);
+        dispatch(
+          setSongLikes({
+            likes: data.message.likes,
+            songId: data.message.songId,
+          }),
+        );
+      } else if (message.event === "new-room") {
+        const data: NewRoom = JSON.parse(event.data);
+        dispatch(addNewRoom(data.message.room));
+      } else if (message.event === "current-song") {
+        const data: CurrentSong = JSON.parse(event.data);
+        dispatch(setCurrentPlaying(data.message));
+        if (currentRoom?.owner.auth0Id !== auth0Id) {
+          dispatch(setLoading(false));
+          dispatch(setPlayingState(data.message.playing));
+        }
+      } else if (message.event === "next-song") {
+        const data: NextSong = JSON.parse(event.data);
+        dispatch(
+          setCurrentPlaying({
+            song: data.message,
+            masterTime: {
+              date: Date.now(),
+              currentTime: 0,
+              duration: 0,
+            },
+          }),
+        );
+      } else if (message.event === "update-master-time") {
+        const data: UpdateMasterTime = JSON.parse(event.data);
+        console.log(data);
+        if (currentRoom?.owner.auth0Id !== auth0Id)
+          dispatch(setMasterTime(data.message));
+      } else if (message.event == "update-player-state") {
+        const data: UpdatePlayerState = JSON.parse(event.data);
+        if (currentRoom?.owner.auth0Id !== auth0Id) {
+          dispatch(setLoading(false));
+          dispatch(setPlayingState(data.message));
+        }
       }
     };
 
@@ -198,42 +316,36 @@ const Navbar: React.FC = () => {
           {/* Mobile Menu Button */}
           <button
             className="md:hidden"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+            aria-label="Toggle menu"
           >
-            <motion.svg
-              width="25"
-              height="25"
+            <svg
+              width="24"
+              height="24"
               viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor" // 🔥 Key line
-              strokeWidth={2} // Add this if missing
-              strokeLinecap="round" // Optional: nicer look
-              strokeLinejoin="round" // Optional: smoother corners
-              className="cursor-pointer md:hidden text-black dark:text-white"
+              className="text-black dark:text-white"
             >
               {/* Top Line */}
               <motion.line
-                x1="3"
-                x2="21"
+                x1="4"
                 y1="6"
+                x2="20"
                 y2="6"
-                {...commonProps}
+                {...animatedLineProps}
                 animate={{
-                  y1: mobileMenuOpen ? 12 : 6,
-                  y2: mobileMenuOpen ? 12 : 6,
                   rotate: mobileMenuOpen ? 45 : 0,
-                  vertOriginX: "12",
-                  vertOriginY: "12",
+                  y: mobileMenuOpen ? 6 : 0,
                 }}
+                style={{ transformOrigin: "12px 12px" }}
               />
 
               {/* Middle Line */}
               <motion.line
-                x1="3"
-                x2="21"
+                x1="4"
                 y1="12"
+                x2="20"
                 y2="12"
-                {...commonProps}
+                {...animatedLineProps}
                 animate={{
                   opacity: mobileMenuOpen ? 0 : 1,
                 }}
@@ -241,20 +353,18 @@ const Navbar: React.FC = () => {
 
               {/* Bottom Line */}
               <motion.line
-                x1="3"
-                x2="21"
+                x1="4"
                 y1="18"
+                x2="20"
                 y2="18"
-                {...commonProps}
+                {...animatedLineProps}
                 animate={{
-                  y1: mobileMenuOpen ? 12 : 18,
-                  y2: mobileMenuOpen ? 12 : 18,
                   rotate: mobileMenuOpen ? -45 : 0,
-                  vertOriginX: "12",
-                  vertOriginY: "12",
+                  y: mobileMenuOpen ? -6 : 0,
                 }}
+                style={{ transformOrigin: "12px 12px" }}
               />
-            </motion.svg>
+            </svg>
           </button>
         </div>
 

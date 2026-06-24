@@ -1,8 +1,21 @@
-import { Pause, Play, SkipBack, SkipForward } from "lucide-react";
-import { useState } from "react";
+import { useEffect } from "react";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import { reqCurrentSong } from "../../socket/socket";
+import musicProfile from "../../assets/musicprofile.png";
+import AudioController from "./AudioController";
+import { setLoading } from "../../store/slices/PlayerSlice";
 
 export default function MusicPlayer() {
-  const [playing, setPlaying] = useState(true);
+  const currentRoom = useAppSelector((state) => state.rooms.currentRoom);
+  const nowPlaying = currentRoom ? currentRoom.nowPlaying : null;
+  const isQueueEmpty = currentRoom && currentRoom.songs.length <= 0;
+  const dispatch = useAppDispatch();
+  useEffect(() => {
+    if (!isQueueEmpty && currentRoom) {
+      dispatch(setLoading(true));
+      reqCurrentSong(currentRoom.roomId);
+    }
+  }, [currentRoom?.nowPlaying?.song.id, currentRoom?.songs]);
 
   return (
     <div
@@ -18,7 +31,7 @@ export default function MusicPlayer() {
   "
     >
       <img
-        src="https://picsum.photos/500"
+        src={nowPlaying ? nowPlaying.song.picture : musicProfile}
         alt="cover"
         className="
     w-full
@@ -29,51 +42,12 @@ export default function MusicPlayer() {
       />
 
       <div className="mt-6 text-center">
-        <h2 className="text-2xl font-bold">Believer</h2>
-
-        <p className="text-slate-400">Imagine Dragons</p>
+        <h2 className="text-2xl font-bold">
+          {nowPlaying?.song.name || "No Song"}
+        </h2>
       </div>
 
-      {/* Progress */}
-
-      <div className="mt-6">
-        <div className="h-2 bg-slate-800 rounded-full">
-          <div className="h-full w-1/3 bg-violet-500 rounded-full" />
-        </div>
-
-        <div className="flex justify-between mt-2 text-xs text-slate-400">
-          <span>1:24</span>
-          <span>3:56</span>
-        </div>
-      </div>
-
-      {/* Controls */}
-
-      <div className="flex justify-center items-center gap-6 mt-8">
-        <button className="cursor-pointer">
-          <SkipBack />
-        </button>
-
-        <button
-          onClick={() => setPlaying(!playing)}
-          className="
-            w-14
-            h-14
-            rounded-full
-            bg-violet-600
-            flex
-            items-center
-            justify-center
-            cursor-pointer
-          "
-        >
-          {playing ? <Pause /> : <Play />}
-        </button>
-
-        <button className="cursor-pointer">
-          <SkipForward />
-        </button>
-      </div>
+      <AudioController nowPlaying={nowPlaying} />
     </div>
   );
 }
