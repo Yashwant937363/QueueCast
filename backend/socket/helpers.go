@@ -114,12 +114,19 @@ func GetNextSong(room *structs.Room) (*structs.NowPlaying, error) {
 			nsong = song
 		}
 	}
-	// for i, song := range room.Songs {
-	// 	if song.Id == nsong.Id {
-	// 		room.Songs = append(room.Songs[:i], room.Songs[i+1:]...)
-	// 		break
-	// 	}
-	// }
+	for i, song := range room.Songs {
+		if song.Id == nsong.Id {
+			room.Songs = append(room.Songs[:i], room.Songs[i+1:]...)
+			break
+		}
+	}
+
+	likeKey := "room:" + room.RoomId + ":song:" + nsong.Id + ":likes"
+	err := myredis.RDB.Del(ctx, likeKey).Err()
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	nowPlayingKey := "room:" + room.RoomId + ":now-playing"
 
 	nowPlaying := structs.NowPlaying{
@@ -135,7 +142,7 @@ func GetNextSong(room *structs.Room) (*structs.NowPlaying, error) {
 	data, _ := json.Marshal(nowPlaying)
 
 	myredis.RDB.Set(ctx, nowPlayingKey, data, 0)
-	// err = SaveRoom(room)
+	SaveRoom(room)
 	return &nowPlaying, nil
 }
 
@@ -159,4 +166,38 @@ func GetNowPlaying(roomId string) (*structs.NowPlaying, error) {
 		}
 	}
 	return nowPlaying, nil
+}
+
+//Subcriber Helpers
+
+func ParsePayload[T any](payload string) (*T, error) {
+	var req T
+	err := json.Unmarshal([]byte(payload), &req)
+	if err != nil {
+		return nil, err
+	}
+	return &req, nil
+}
+
+func BroadcastToRoom(roomId string, event string, data any) {
+	for _, client := range Clients {
+		if client.Info.RoomId == roomId {
+			SendEvent(client, event, data)
+		}
+	}
+}
+
+func Broadcast(event string, data any) {
+	for _, client := range Clients {
+		SendEvent(client, event, data)
+	}
+}
+
+func RemoveClientInfo(auth0Id string) {
+	for _, client := range Clients {
+		if client.Info.Auth0Id == auth0Id {
+			Clients[client.Conn].Info = structs.ClientInfo{}
+			return
+		}
+	}
 }

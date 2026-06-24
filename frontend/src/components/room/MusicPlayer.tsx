@@ -9,9 +9,11 @@ export default function MusicPlayer() {
   const currentRoom = useAppSelector((state) => state.rooms.currentRoom);
   const nowPlaying = currentRoom ? currentRoom.nowPlaying : null;
   const isQueueEmpty = currentRoom && currentRoom.songs.length <= 0;
+  const { isLoading } = useAppSelector((state) => state.player);
   const dispatch = useAppDispatch();
   useEffect(() => {
-    if (!isQueueEmpty && currentRoom) {
+    console.log("Queue Empty: ", isQueueEmpty);
+    if (!isQueueEmpty && currentRoom && !isLoading) {
       dispatch(setLoading(true));
       reqCurrentSong(currentRoom.roomId);
     }

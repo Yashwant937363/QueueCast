@@ -14,6 +14,7 @@ import {
   addNewRoom,
   addSong,
   leftClient,
+  removeSongFromRoom,
   removeSongFromWaiting,
   setCurrentPlaying,
   setCurrentRoom,
@@ -192,6 +193,8 @@ const Navbar: React.FC = () => {
         notify("error", data.message.title, data.message.message);
         if (data.message.event === Events.AddSong) {
           dispatch(removeSongFromWaiting(data.message.data.id));
+        } else if (data.message.event === Events.NextSong) {
+          dispatch(setLoading(false));
         }
       } else if (message.event === "song-added") {
         const data: SongAdded = JSON.parse(event.data);
@@ -227,6 +230,8 @@ const Navbar: React.FC = () => {
             },
           }),
         );
+        dispatch(removeSongFromRoom(data.message));
+        dispatch(setLoading(true));
       } else if (message.event === "update-master-time") {
         const data: UpdateMasterTime = JSON.parse(event.data);
         console.log(data);

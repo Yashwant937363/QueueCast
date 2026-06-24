@@ -3,8 +3,15 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, Pause, Play } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import YouTubePlayer from "youtube-player";
-import { setMasterTime } from "../../store/slices/RoomsSlice";
-import { updateMasterTime, updatePlayState } from "../../socket/socket";
+import {
+  setCurrentPlaying,
+  setMasterTime,
+} from "../../store/slices/RoomsSlice";
+import {
+  reqNextSong,
+  updateMasterTime,
+  updatePlayState,
+} from "../../socket/socket";
 import type { NowPlaying } from "../../types/NowPlaying";
 import { setLoading, setPlayingState } from "../../store/slices/PlayerSlice";
 
@@ -25,6 +32,11 @@ export default function AudioController({ nowPlaying }: Props) {
   const currentRoom = useAppSelector((state) => state.rooms.currentRoom);
   const { auth0Id } = useAppSelector((state) => state.user);
   const isOwner = currentRoom ? currentRoom.owner.auth0Id === auth0Id : false;
+  const isSongEnded =
+    duration !== 0 &&
+    currentTime !== 0 &&
+    currentTime >= duration &&
+    currentRoom;
 
   const handleUpdateMasterTime = ({
     currentTime,
@@ -65,15 +77,37 @@ export default function AudioController({ nowPlaying }: Props) {
 
           audio.onloadedmetadata = () => {
             setDuration(audio.duration);
+            audio.currentTime = nowPlaying.masterTime.currentTime;
           };
         } else {
           if (!youtubeRef.current) {
             youtubeRef.current = YouTubePlayer("youtube-player");
           }
+          const waitUntilPlaying = () =>
+            new Promise<void>((resolve) => {
+              const handler = (event: { data: number }) => {
+                if (event.data === 1) {
+                  resolve();
+                }
+              };
+
+              youtubeRef.current.on("stateChange", handler);
+            });
           youtubeRef.current.loadVideoById(nowPlaying.song.url);
+          await waitUntilPlaying();
+          updatePlayState(true);
+          await youtubeRef.current.seekTo(
+            nowPlaying.masterTime.currentTime,
+            true,
+          );
+
+          const updatedDuration = await youtubeRef.current.getDuration();
+          setDuration(updatedDuration);
+
           dispatch(setPlayingState(true));
         }
         dispatch(setLoading(false));
+        setCurrentTime(nowPlaying.masterTime.currentTime);
       }
     }, 200);
     return () => {
@@ -82,26 +116,36 @@ export default function AudioController({ nowPlaying }: Props) {
   }, [nowPlaying?.song.id]);
   useEffect(() => {
     const interval = setInterval(async () => {
-      if (!(nowPlaying && audioRef.current && playing)) return;
+      if (
+        !nowPlaying ||
+        !audioRef.current ||
+        !playing ||
+        isSongEnded ||
+        isLoading
+      )
+        return;
       if (
         currentRoom &&
         currentRoom.owner.auth0Id === auth0Id &&
         audioRef.current
       ) {
         let currentTime = 0;
+        let updatedDuration = 0;
         if (nowPlaying.song.source === "jiosaavn") {
           currentTime = audioRef.current.currentTime;
+          updatedDuration = audioRef.current.duration;
         } else {
-          currentTime = await youtubeRef.current?.getCurrentTime();
           if (youtubeRef.current) {
-            const total = await youtubeRef.current.getDuration();
-            setDuration(total);
+            console.log("Youtube: ", await youtubeRef.current.getPlayerState());
+            currentTime = await youtubeRef.current.getCurrentTime();
+            updatedDuration = await youtubeRef.current.getDuration();
+            setDuration(updatedDuration);
           }
         }
         setCurrentTime(currentTime);
         handleUpdateMasterTime({
           currentTime,
-          duration,
+          duration: updatedDuration,
         });
         console.log("timer");
       }
@@ -109,7 +153,18 @@ export default function AudioController({ nowPlaying }: Props) {
     return () => {
       clearInterval(interval);
     };
-  }, [playing]);
+  }, [playing, isLoading]);
+  useEffect(() => {
+    if (isSongEnded) {
+      setCurrentTime(0);
+      setDuration(0);
+      dispatch(setCurrentPlaying(null));
+      dispatch(setLoading(true));
+    }
+    if (isSongEnded && isOwner) {
+      reqNextSong(currentRoom.roomId);
+    }
+  }, [currentTime, duration]);
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);

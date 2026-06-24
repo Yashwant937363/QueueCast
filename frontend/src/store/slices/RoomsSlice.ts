@@ -83,6 +83,13 @@ const roomSlice = createSlice({
         (songId) => songId !== action.payload.id,
       );
     },
+    removeSongFromRoom: (state, action: PayloadAction<Song>) => {
+      if (state.currentRoom) {
+        state.currentRoom.songs = state.currentRoom.songs.filter(
+          (song) => song.id !== action.payload.id,
+        );
+      }
+    },
     addSongToRoom: (state, action: PayloadAction<string>) => {
       state.waitingSongs = [...state.waitingSongs, action.payload];
     },
@@ -118,7 +125,7 @@ const roomSlice = createSlice({
         state.publicRooms = [...state.publicRooms, action.payload];
       }
     },
-    setCurrentPlaying: (state, action: PayloadAction<NowPlaying>) => {
+    setCurrentPlaying: (state, action: PayloadAction<NowPlaying | null>) => {
       if (state.currentRoom) {
         state.currentRoom.nowPlaying = action.payload;
         // state.currentRoom.songs = state.currentRoom.songs.filter(
@@ -159,6 +166,7 @@ export const {
   leftClient,
   addSong,
   addSongToRoom,
+  removeSongFromRoom,
   removeSongFromWaiting,
   setSongLiked,
   setSongLikes,

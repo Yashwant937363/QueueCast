@@ -18,8 +18,6 @@ func WritePump(client *structs.Client) {
 			msg,
 		)
 
-		fmt.Println("Actual Data: ", msg)
-
 		if err != nil {
 			fmt.Println("Write error:", err)
 			return

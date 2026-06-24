@@ -45,3 +45,8 @@ type UpdatePlayingStateReq struct {
 	RoomId  string `json:"roomId"`
 	Playing bool   `json:"playing"`
 }
+
+type NextSongReq struct {
+	Song   Song   `json:"song"`
+	RoomId string `json:"roomId"`
+}

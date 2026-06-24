@@ -104,6 +104,11 @@ func addSong(conn *websocket.Conn, msg structs.WSMessage) {
 
 	_, exists := FindSong(room, newSong.Id)
 
+	if exists == false {
+		nowPlaying, err := GetNowPlaying(client.Info.RoomId)
+		exists = err == nil && nowPlaying.Song.Id == newSong.Id
+	}
+
 	if !exists && newSong.Id != "" {
 		room.Songs = append(room.Songs, newSong)
 	} else {
@@ -228,10 +233,14 @@ func nextSong(conn *websocket.Conn, msg structs.WSMessage) {
 	}
 	nowPlaying, err := GetNextSong(room)
 	if err != nil {
-		SendError(client, "Next Song", err.Error(), "", "")
+		SendError(client, "Next Song", err.Error(), "next-song", "")
+		return
 	}
 
 	SendEvent(client, "next-song", nowPlaying.Song)
+	PublishJSON(ctx, "next-song", structs.NextSongReq{
+		Song: nowPlaying.Song, RoomId: client.Info.RoomId,
+	})
 }
 
 func setSongLiked(conn *websocket.Conn, msg structs.WSMessage) {
