@@ -8,16 +8,14 @@ import { setLoading } from "../../store/slices/PlayerSlice";
 export default function MusicPlayer() {
   const currentRoom = useAppSelector((state) => state.rooms.currentRoom);
   const nowPlaying = currentRoom ? currentRoom.nowPlaying : null;
-  const isQueueEmpty = currentRoom && currentRoom.songs.length <= 0;
-  const { isLoading } = useAppSelector((state) => state.player);
   const dispatch = useAppDispatch();
+
   useEffect(() => {
-    console.log("Queue Empty: ", isQueueEmpty);
-    if (!isQueueEmpty && currentRoom && !isLoading) {
+    if (nowPlaying == null && currentRoom) {
       dispatch(setLoading(true));
       reqCurrentSong(currentRoom.roomId);
     }
-  }, [currentRoom?.nowPlaying?.song.id, currentRoom?.songs]);
+  }, [currentRoom]);
 
   return (
     <div

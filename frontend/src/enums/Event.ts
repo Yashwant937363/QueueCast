@@ -9,6 +9,7 @@ const Events = {
   NextSong: "next-song",
   UpdateMasterTime: "update-master-time",
   UpdatePlayState: "update-player-state",
+  ClearNowPlaying: "clear-now-playing",
 } as const;
 
 // 2. Export the value

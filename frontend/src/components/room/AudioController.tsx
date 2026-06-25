@@ -8,6 +8,7 @@ import {
   setMasterTime,
 } from "../../store/slices/RoomsSlice";
 import {
+  clearNowPlaying,
   reqNextSong,
   updateMasterTime,
   updatePlayState,
@@ -159,10 +160,14 @@ export default function AudioController({ nowPlaying }: Props) {
       setCurrentTime(0);
       setDuration(0);
       dispatch(setCurrentPlaying(null));
+      dispatch(setPlayingState(false));
+    }
+    if (isSongEnded && isOwner && currentRoom.songs.length > 0) {
+      reqNextSong(currentRoom.roomId);
       dispatch(setLoading(true));
     }
-    if (isSongEnded && isOwner) {
-      reqNextSong(currentRoom.roomId);
+    if (currentRoom && currentRoom.songs.length <= 0 && isSongEnded) {
+      clearNowPlaying();
     }
   }, [currentTime, duration]);
   const formatTime = (seconds: number) => {

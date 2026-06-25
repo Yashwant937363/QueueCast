@@ -151,7 +151,10 @@ const Navbar: React.FC = () => {
       }
       interface CurrentSong {
         event: "current-song";
-        message: SocketNowPlaying;
+        message: {
+          nowPlaying: SocketNowPlaying;
+          isNextSong: boolean;
+        };
       }
       interface UpdateMasterTime {
         event: "update-master-time";
@@ -213,10 +216,13 @@ const Navbar: React.FC = () => {
         dispatch(addNewRoom(data.message.room));
       } else if (message.event === "current-song") {
         const data: CurrentSong = JSON.parse(event.data);
-        dispatch(setCurrentPlaying(data.message));
+        const { isNextSong, nowPlaying } = data.message;
+        dispatch(setCurrentPlaying(nowPlaying));
         if (currentRoom?.owner.auth0Id !== auth0Id) {
           dispatch(setLoading(false));
-          dispatch(setPlayingState(data.message.playing));
+          dispatch(setPlayingState(nowPlaying.playing));
+        } else {
+          if (isNextSong) dispatch(removeSongFromRoom(nowPlaying.song));
         }
       } else if (message.event === "next-song") {
         const data: NextSong = JSON.parse(event.data);

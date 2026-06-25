@@ -143,6 +143,9 @@ func GetNextSong(room *structs.Room) (*structs.NowPlaying, error) {
 
 	myredis.RDB.Set(ctx, nowPlayingKey, data, 0)
 	SaveRoom(room)
+	PublishJSON(ctx, "next-song", structs.NextSongReq{
+		Song: nowPlaying.Song, RoomId: room.RoomId,
+	})
 	return &nowPlaying, nil
 }
 

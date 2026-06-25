@@ -70,3 +70,7 @@ export function updateMasterTime(req: {
 export function updatePlayState(playing: boolean) {
   sendMessage(Events.UpdatePlayState, { playing });
 }
+
+export function clearNowPlaying() {
+  sendMessage(Events.ClearNowPlaying, {});
+}

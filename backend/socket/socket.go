@@ -74,6 +74,8 @@ func WsHandler(w http.ResponseWriter, r *http.Request) {
 			updateMasterTime(msg)
 		case "update-player-state":
 			updatePlayingState(conn, msg)
+		case "clear-now-playing":
+			clearNowPlaying(conn)
 		}
 
 		fmt.Printf("Received: %s\\n", message)
@@ -91,7 +93,7 @@ func roomLeaved(conn *websocket.Conn) {
 
 	info := Clients[conn].Info
 	if info.Auth0Id != "" && info.RoomId != "" {
-		fmt.Println("Having Data")
+
 		val, err := myredis.RDB.Get(ctx, "room:"+info.RoomId).Result()
 		if err == nil {
 			var room structs.Room
@@ -105,6 +107,18 @@ func roomLeaved(conn *websocket.Conn) {
 				data, _ := json.Marshal(room)
 				myredis.RDB.Set(ctx, "room:"+info.RoomId, data, 0)
 			}
+		}
+		nowPlaying, err := GetNowPlaying(info.RoomId)
+		if err == nil {
+			nowPlaying.Playing = false
+			PublishJSON(ctx, "update-player-state", structs.UpdatePlayingStateReq{
+				RoomId:  info.RoomId,
+				Playing: false,
+			})
+			nowPlayingKey := "room:" + info.RoomId + ":now-playing"
+			data, _ := json.Marshal(nowPlaying)
+
+			myredis.RDB.Set(ctx, nowPlayingKey, data, 0)
 		}
 	}
 

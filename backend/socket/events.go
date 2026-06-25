@@ -147,11 +147,13 @@ func currentSong(conn *websocket.Conn, msg structs.WSMessage) {
 
 	val, err := GetNowPlaying(client.Info.RoomId)
 	var nowPlaying *structs.NowPlaying
+	isNextSong := false
 
 	if err != nil {
 		if errors.Is(err, ErrEmptyRedis) {
 			if room.Owner.Auth0Id == client.Info.Auth0Id {
 				nowPlaying, err = GetNextSong(room)
+				isNextSong = true
 			} else {
 				SendError(client, "Current Song", err.Error(), "", "")
 
@@ -163,7 +165,10 @@ func currentSong(conn *websocket.Conn, msg structs.WSMessage) {
 		nowPlaying = val
 	}
 
-	SendEvent(client, "current-song", nowPlaying)
+	SendEvent(client, "current-song", map[string]any{
+		"nowPlaying": nowPlaying,
+		"isNextSong": isNextSong,
+	})
 }
 
 func updatePlayingState(conn *websocket.Conn, msg structs.WSMessage) {
@@ -238,9 +243,7 @@ func nextSong(conn *websocket.Conn, msg structs.WSMessage) {
 	}
 
 	SendEvent(client, "next-song", nowPlaying.Song)
-	PublishJSON(ctx, "next-song", structs.NextSongReq{
-		Song: nowPlaying.Song, RoomId: client.Info.RoomId,
-	})
+
 }
 
 func setSongLiked(conn *websocket.Conn, msg structs.WSMessage) {
@@ -287,4 +290,13 @@ func setSongLiked(conn *websocket.Conn, msg structs.WSMessage) {
 		RoomId: room.RoomId,
 		SongId: likeSongMessage.SongId,
 	})
+}
+
+func clearNowPlaying(conn *websocket.Conn) {
+	client := Clients[conn]
+	nowPlayingKey := "room:" + client.Info.RoomId + ":now-playing"
+	err := myredis.RDB.Del(ctx, nowPlayingKey).Err()
+	if err != nil {
+		fmt.Println(err)
+	}
 }
