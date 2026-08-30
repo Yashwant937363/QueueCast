@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/Yashwant937363/QueueCast/backend/database/myredis"
 	"github.com/Yashwant937363/QueueCast/backend/database/postgres"
@@ -19,7 +20,7 @@ import (
 var ctx = context.Background()
 
 func main() {
-
+	fmt.Println("Server Startup")
 	_, err := middleware.NewValidator()
 	if err != nil {
 		log.Fatalf("failed to create jwt validator: %v", err)
@@ -27,13 +28,15 @@ func main() {
 
 	enverr := godotenv.Load()
 	if enverr != nil {
-		fmt.Println("error while loading env file")
+		log.Fatalf("error while loading env file")
 	}
 	r := gin.Default()
 
+	fmt.Println(os.Getenv("FRONTEND_URL"))
+
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
-			"http://localhost:5173",
+			os.Getenv("FRONTEND_URL"),
 		},
 		AllowMethods: []string{
 			"GET", "POST", "PUT", "DELETE", "OPTIONS",

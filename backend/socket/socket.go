@@ -57,7 +57,6 @@ func WsHandler(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		switch msg.Event {
-
 		case "join-room":
 			joinRoom(conn, msg)
 		case "leave-room":
