@@ -12,10 +12,11 @@ type BroadcastMessage struct {
 }
 
 type JoinRoomMessage struct {
-	Auth0Id  string `json:"auth0Id"`
-	RoomId   string `json:"roomId"`
-	Username string `json:"username"`
-	Picture  string `json:"picture"`
+	Auth0Id     string `json:"auth0Id"`
+	PrevGuestId string `json:"prevGuestId,omitempty"`
+	RoomId      string `json:"roomId"`
+	Username    string `json:"username"`
+	Picture     string `json:"picture"`
 }
 
 type WSMessage struct {

@@ -1,7 +1,8 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
 import type SyncUserReq from "../../types/store/UserSlice/SyncUserReq";
 import type UserSlice from "../../types/store/UserSlice/UserSlice";
+import { getOrInitGuestUser, updateGuestUsername } from "../../utils/guestUser";
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 
@@ -14,6 +15,7 @@ export const syncUser = createAsyncThunk(
         username: req.username,
         email: req.email,
         picture: req.picture,
+        prevGuestId: req.prevGuestId,
       },
       {
         headers: {
@@ -40,6 +42,7 @@ const initialState: UserSlice = {
   picture: "",
   isPending: false,
   isAuthenticated: false,
+  isGuest: false,
 };
 
 const userSlice = createSlice({
@@ -50,6 +53,21 @@ const userSlice = createSlice({
       state.email = action.payload.email;
       state.username = action.payload.username;
       state.picture = action.payload.picture;
+    },
+    initGuestUser: (state) => {
+      if (!state.isAuthenticated) {
+        const guest = getOrInitGuestUser();
+        state.auth0Id = guest.guestId;
+        state.username = guest.username;
+        state.picture = guest.picture;
+        state.isGuest = true;
+      }
+    },
+    updateGuestName: (state, action: PayloadAction<string>) => {
+      if (state.isGuest) {
+        const updated = updateGuestUsername(action.payload);
+        state.username = updated.username;
+      }
     },
   },
   extraReducers: (builder) => {
@@ -65,6 +83,7 @@ const userSlice = createSlice({
         state.username = user.username;
         state.picture = user.picture;
         state.isAuthenticated = true;
+        state.isGuest = false;
       }
     });
     builder.addCase(syncUser.rejected, (state) => {
@@ -73,5 +92,5 @@ const userSlice = createSlice({
   },
 });
 
-export const { setLoginDetails } = userSlice.actions;
+export const { setLoginDetails, initGuestUser, updateGuestName } = userSlice.actions;
 export default userSlice.reducer;

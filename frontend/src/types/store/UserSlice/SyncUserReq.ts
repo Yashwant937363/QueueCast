@@ -3,4 +3,5 @@ export default interface SyncUserReq {
   username: string;
   email: string;
   picture: string;
+  prevGuestId?: string;
 }

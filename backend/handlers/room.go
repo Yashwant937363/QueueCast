@@ -14,6 +14,14 @@ import (
 var ctx = context.Background()
 
 func GetRooms(c *gin.Context) {
+	_, autherr := middleware.GetAuth0ID(c.GetHeader("Authorization"))
+	if autherr != nil {
+		c.JSON(401, gin.H{
+			"error": "Unauthorized: " + autherr.Error(),
+		})
+		return
+	}
+
 	roomIds, err := myredis.RDB.SMembers(ctx, "rooms").Result()
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})

@@ -13,6 +13,7 @@ socket.onopen = () => {
 interface JoinRoomReq {
   roomId: string;
   auth0Id: string;
+  prevGuestId?: string;
   username: string;
   picture: string;
 }
@@ -26,6 +27,7 @@ export function joinRoom(req: JoinRoomReq) {
 
   sendMessage(Events.JoinRoom, {
     auth0Id: req.auth0Id,
+    prevGuestId: req.prevGuestId,
     roomId: req.roomId,
     username: req.username,
     picture: req.picture,

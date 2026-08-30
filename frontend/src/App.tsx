@@ -5,15 +5,8 @@ import Navbar from "./components/Navbar";
 import Rooms from "./pages/Rooms";
 import Youtube from "./pages/Youtube";
 import JioSaavan from "./pages/JioSaavan";
-import { useAppDispatch } from "./store/hooks";
-import { useEffect } from "react";
-import { getRooms } from "./store/slices/RoomsSlice";
 
 function App() {
-  const dispatch = useAppDispatch();
-  useEffect(() => {
-    dispatch(getRooms());
-  }, []);
   return (
     <BrowserRouter>
       <Routes>

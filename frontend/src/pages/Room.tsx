@@ -10,16 +10,16 @@ import { joinRoom } from "../socket/socket";
 import { useParams } from "react-router";
 
 export default function Room() {
-  const { isLoading, isAuthenticated } = useAuth0();
+  const { isLoading } = useAuth0();
   const { isPending } = useAppSelector((state) => state.user);
   const currentRoom = useAppSelector((state) => state.rooms.currentRoom);
   const { auth0Id, picture, username } = useAppSelector((state) => state.user);
   const { roomId } = useParams();
   useEffect(() => {
     if (
-      isAuthenticated &&
-      !isPending &&
       !isLoading &&
+      !isPending &&
+      auth0Id &&
       roomId &&
       roomId !== currentRoom?.roomId
     ) {
@@ -30,7 +30,7 @@ export default function Room() {
         username,
       });
     }
-  }, [isAuthenticated, isPending, isLoading]);
+  }, [auth0Id, isLoading, isPending, roomId, currentRoom?.roomId]);
   // useEffect(() => {
   //   return () => leaveRoom();
   // }, []);

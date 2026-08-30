@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/Yashwant937363/QueueCast/backend/database/myredis"
 	"github.com/Yashwant937363/QueueCast/backend/structs"
@@ -24,6 +25,27 @@ func joinRoom(conn *websocket.Conn, msg structs.WSMessage) {
 	if err != nil {
 		SendError(Clients[conn], "Join Room", "Room Doesn't Exist", "", "")
 		return
+	}
+
+	if req.PrevGuestId != "" && strings.HasPrefix(req.PrevGuestId, "guest_") {
+		// Clean up old guest client entry from room.Clients
+		updatedClients := make([]structs.RoomUser, 0, len(room.Clients))
+		for _, client := range room.Clients {
+			if client.Auth0Id != req.PrevGuestId {
+				updatedClients = append(updatedClients, client)
+			}
+		}
+		room.Clients = updatedClients
+
+		// Migrate song likes in Redis from prevGuestId to Auth0Id
+		for i := range room.Songs {
+			likeKey := "room:" + req.RoomId + ":song:" + room.Songs[i].Id + ":likes"
+			guestLiked, _ := myredis.RDB.SIsMember(ctx, likeKey, req.PrevGuestId).Result()
+			if guestLiked {
+				myredis.RDB.SRem(ctx, likeKey, req.PrevGuestId)
+				myredis.RDB.SAdd(ctx, likeKey, req.Auth0Id)
+			}
+		}
 	}
 
 	exists := false

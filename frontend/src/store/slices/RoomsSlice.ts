@@ -15,10 +15,13 @@ const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 
 export const getRooms = createAsyncThunk(
   "rooms/getRooms",
-  async (_, thunkAPI) => {
+  async (token: string | undefined, thunkAPI) => {
     try {
       const response = await axios.get<{ rooms: Room[] }>(
         `${SERVER_URL}/api/rooms`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
       );
 
       return response.data.rooms;

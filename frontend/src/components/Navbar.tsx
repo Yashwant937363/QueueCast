@@ -2,10 +2,15 @@ import type React from "react";
 import { useEffect } from "react";
 import { Outlet, useNavigate } from "react-router";
 import { socket } from "../socket/socket";
-import { LogOut, Music } from "lucide-react";
+import { LogOut, Music, Edit2, Check } from "lucide-react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
-import { syncUser } from "../store/slices/UserSlice";
+import {
+  syncUser,
+  initGuestUser,
+  updateGuestName,
+} from "../store/slices/UserSlice";
+import { getStoredGuestId, clearGuestUser } from "../utils/guestUser";
 import { NavLink } from "react-router";
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
@@ -62,13 +67,25 @@ const Navbar: React.FC = () => {
     },
   ];
   // const navigate = useNavigate();
+  const { username, picture, isGuest } = useAppSelector((state) => state.user);
+  const [isEditingGuestName, setIsEditingGuestName] = useState(false);
+  const [tempGuestName, setTempGuestName] = useState("");
+
   const {
     loginWithRedirect,
     getAccessTokenSilently,
     logout,
     user,
     isAuthenticated,
+    isLoading,
   } = useAuth0();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      dispatch(initGuestUser());
+    }
+  }, [isLoading, isAuthenticated, dispatch]);
+
   useEffect(() => {
     const setUserDetails = async () => {
       const token = await getAccessTokenSilently({
@@ -79,19 +96,25 @@ const Navbar: React.FC = () => {
       if (!user?.email) {
         return;
       }
+      const prevGuestId = getStoredGuestId();
       dispatch(
         syncUser({
           email: user?.email,
           picture: user?.picture ?? "",
           username: user.name ?? "",
           token: token,
+          prevGuestId: prevGuestId ?? undefined,
         }),
-      );
+      ).then(() => {
+        if (prevGuestId) {
+          clearGuestUser();
+        }
+      });
     };
     if (isAuthenticated) {
       setUserDetails();
     }
-  }, [isAuthenticated, user, dispatch]);
+  }, [isAuthenticated, user, dispatch, getAccessTokenSilently]);
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       const message = JSON.parse(event.data);
@@ -294,12 +317,69 @@ const Navbar: React.FC = () => {
           {/* Right Side */}
           <div className="hidden md:flex items-center gap-4">
             {!isAuthenticated ? (
-              <button
-                onClick={() => loginWithRedirect()}
-                className="bg-violet-600 hover:bg-violet-700 transition px-5 py-2 rounded-xl font-medium cursor-pointer"
-              >
-                Login
-              </button>
+              <div className="flex items-center gap-3">
+                {isGuest && (
+                  <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl">
+                    <img
+                      src={picture}
+                      alt={username}
+                      className="w-7 h-7 rounded-full border border-violet-500/50 bg-slate-800 object-cover"
+                    />
+                    {isEditingGuestName ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="text"
+                          value={tempGuestName}
+                          onChange={(e) => setTempGuestName(e.target.value)}
+                          className="bg-slate-800 text-white text-xs px-2 py-1 rounded border border-violet-500 focus:outline-none w-28"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              if (tempGuestName.trim()) {
+                                dispatch(updateGuestName(tempGuestName.trim()));
+                              }
+                              setIsEditingGuestName(false);
+                            }
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            if (tempGuestName.trim()) {
+                              dispatch(updateGuestName(tempGuestName.trim()));
+                            }
+                            setIsEditingGuestName(false);
+                          }}
+                          className="text-violet-400 hover:text-violet-300 text-xs p-1 cursor-pointer"
+                        >
+                          <Check size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-medium text-slate-300 max-w-27.5 truncate">
+                          {username || "Guest"}
+                        </span>
+                        <button
+                          onClick={() => {
+                            setTempGuestName(username);
+                            setIsEditingGuestName(true);
+                          }}
+                          title="Edit Guest Name"
+                          className="text-slate-400 hover:text-white transition cursor-pointer p-0.5"
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <button
+                  onClick={() => loginWithRedirect()}
+                  className="bg-violet-600 hover:bg-violet-700 transition px-5 py-2 rounded-xl font-medium cursor-pointer"
+                >
+                  Login
+                </button>
+              </div>
             ) : (
               <>
                 <img
@@ -415,14 +495,83 @@ const Navbar: React.FC = () => {
                   </NavLink>
                 ))}
 
-                <div className="pt-4 border-t border-slate-800">
+                <div className="pt-4 border-t border-slate-800 flex flex-col gap-3">
                   {!isAuthenticated ? (
-                    <button
-                      onClick={() => loginWithRedirect()}
-                      className="w-full bg-violet-600 hover:bg-violet-700 py-2 rounded-xl"
-                    >
-                      Login
-                    </button>
+                    <>
+                      {isGuest && (
+                        <div className="flex items-center justify-between bg-slate-900 border border-slate-800 p-3 rounded-xl">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={picture}
+                              alt={username}
+                              className="w-9 h-9 rounded-full border border-violet-500/50 bg-slate-800 object-cover"
+                            />
+                            {isEditingGuestName ? (
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="text"
+                                  value={tempGuestName}
+                                  onChange={(e) =>
+                                    setTempGuestName(e.target.value)
+                                  }
+                                  className="bg-slate-800 text-white text-sm px-2 py-1 rounded border border-violet-500 focus:outline-none w-32"
+                                  autoFocus
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      if (tempGuestName.trim()) {
+                                        dispatch(
+                                          updateGuestName(tempGuestName.trim()),
+                                        );
+                                      }
+                                      setIsEditingGuestName(false);
+                                    }
+                                  }}
+                                />
+                                <button
+                                  onClick={() => {
+                                    if (tempGuestName.trim()) {
+                                      dispatch(
+                                        updateGuestName(tempGuestName.trim()),
+                                      );
+                                    }
+                                    setIsEditingGuestName(false);
+                                  }}
+                                  className="text-violet-400 p-1 cursor-pointer"
+                                >
+                                  <Check size={16} />
+                                </button>
+                              </div>
+                            ) : (
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-sm text-slate-200">
+                                    {username || "Guest"}
+                                  </p>
+                                  <button
+                                    onClick={() => {
+                                      setTempGuestName(username);
+                                      setIsEditingGuestName(true);
+                                    }}
+                                    className="text-slate-400 hover:text-white p-0.5 cursor-pointer"
+                                  >
+                                    <Edit2 size={13} />
+                                  </button>
+                                </div>
+                                <p className="text-xs text-violet-400 font-mono">
+                                  Guest Mode
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => loginWithRedirect()}
+                        className="w-full bg-violet-600 hover:bg-violet-700 py-2.5 rounded-xl font-medium cursor-pointer"
+                      >
+                        Login
+                      </button>
+                    </>
                   ) : (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -449,7 +598,7 @@ const Navbar: React.FC = () => {
                             },
                           })
                         }
-                        className="p-2 rounded-lg bg-slate-900"
+                        className="p-2 rounded-lg bg-slate-900 cursor-pointer"
                       >
                         <LogOut size={18} />
                       </button>

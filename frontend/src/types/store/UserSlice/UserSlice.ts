@@ -5,4 +5,5 @@ export default interface UserSlice {
   picture: string;
   isAuthenticated: boolean;
   isPending: boolean;
+  isGuest: boolean;
 }
