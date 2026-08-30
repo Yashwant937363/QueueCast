@@ -14,6 +14,8 @@ interface Song {
   primaryArtists: string;
 }
 
+const SAAVAN_DOMAIN = import.meta.env.VITE_JIO_SAAVAN_DOMAIN || "http://localhost:8080/api/saavn";
+
 export default function JioSaavan() {
   const [query, setQuery] = useState("");
   const [songs, setSongs] = useState<Song[]>([]);
@@ -27,7 +29,7 @@ export default function JioSaavan() {
 
     try {
       const response = await fetch(
-        `https://saavn.sumit.co/api/search/songs?query=${encodeURIComponent(
+        `${SAAVAN_DOMAIN}/api/search/songs?query=${encodeURIComponent(
           query,
         )}`,
       );

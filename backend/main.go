@@ -53,6 +53,9 @@ func main() {
 	r.POST("/api/room", handlers.CreateRoom)
 	r.GET("/api/rooms", handlers.GetRooms)
 
+	r.Any("/api/saavn/*path", handlers.ProxySaavn)
+	r.Any("/api/saavn", handlers.ProxySaavn)
+
 	r.GET("/ws", func(c *gin.Context) {
 		socket.WsHandler(c.Writer, c.Request)
 	})
