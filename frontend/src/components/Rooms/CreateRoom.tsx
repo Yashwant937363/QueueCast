@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { Plus } from "lucide-react";
+import { Plus, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useAppSelector } from "../../store/hooks";
 import { useAuth0 } from "@auth0/auth0-react";
@@ -14,6 +14,8 @@ const constructApiUrl = (endpoint: string): string =>
 const CreateRoom: React.FC = () => {
   const [roomName, setRoomName] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [userLimit, setUserLimit] = useState(20);
   const [playbackMode, setPlaybackMode] = useState("master");
   const { auth0Id, picture, username } = useAppSelector((state) => state.user);
@@ -24,47 +26,57 @@ const CreateRoom: React.FC = () => {
       alert("Please enter a room name");
       return;
     }
+    if (isPrivate && password.trim().length < 8) {
+      alert("Password is required for private rooms and must be at least 8 characters long");
+      return;
+    }
     const token = await getAccessTokenSilently({
       authorizationParams: {
         audience: "https://queuecast-api",
       },
     });
 
-    const response = await axios.post(
-      constructApiUrl(""),
-      {
-        user: {
-          name: username,
-          picture,
+    try {
+      const response = await axios.post(
+        constructApiUrl(""),
+        {
+          user: {
+            name: username,
+            picture,
+          },
+          room: {
+            isMasterOnly: playbackMode === "master",
+            isPrivate,
+            password: isPrivate ? password.trim() : undefined,
+            limit: userLimit,
+            name: roomName,
+          },
         },
-        room: {
-          isMasterOnly: playbackMode === "master",
-          isPrivate,
-          limit: userLimit,
-          name: roomName,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
+      );
 
-    if (!(response.status >= 200 && response.status < 300)) {
-      alert("Room Creation Failed");
-      return;
+      if (!(response.status >= 200 && response.status < 300)) {
+        alert("Room Creation Failed");
+        return;
+      }
+      const roomId = response.data.roomId;
+
+      joinRoom({
+        auth0Id,
+        picture,
+        roomId,
+        password: isPrivate ? password.trim() : undefined,
+        username,
+      });
+
+      navigate(`/room/${roomId}`);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || "Room Creation Failed");
     }
-    const roomId = response.data.roomId;
-
-    joinRoom({
-      auth0Id,
-      picture,
-      roomId,
-      username,
-    });
-
-    navigate(`/room/${roomId}`);
   };
 
   return (
@@ -110,7 +122,7 @@ const CreateRoom: React.FC = () => {
           </label>
 
           <div className="space-y-2">
-            <label className="flex items-center gap-2">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
                 checked={!isPrivate}
@@ -119,7 +131,7 @@ const CreateRoom: React.FC = () => {
               Public
             </label>
 
-            <label className="flex items-center gap-2">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
                 checked={isPrivate}
@@ -128,6 +140,43 @@ const CreateRoom: React.FC = () => {
               Private
             </label>
           </div>
+
+          {isPrivate && (
+            <div className="mt-3">
+              <label className="block mb-1.5 text-xs text-violet-400">
+                Room Password (min. 8 characters) *
+              </label>
+              <div className="relative flex items-center">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="At least 8 characters"
+                  className="
+                    w-full
+                    bg-slate-800
+                    border
+                    border-slate-700
+                    rounded-xl
+                    pl-4
+                    pr-10
+                    py-2.5
+                    text-sm
+                    outline-none
+                    focus:border-violet-500
+                  "
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 text-slate-400 hover:text-white transition p-1 cursor-pointer"
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div>

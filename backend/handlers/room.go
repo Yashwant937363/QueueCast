@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"github.com/Yashwant937363/QueueCast/backend/database/myredis"
 	"github.com/Yashwant937363/QueueCast/backend/middleware"
@@ -51,6 +52,7 @@ func GetRooms(c *gin.Context) {
 
 		err := json.Unmarshal([]byte(value.(string)), &room)
 		if err == nil {
+			room.Password = "" // Never leak passwords in public room listings
 			rooms = append(rooms, room)
 		}
 	}
@@ -69,6 +71,7 @@ type CreateRoomDetails struct {
 	Name         string `json:"name"`
 	Limit        int    `json:"limit"`
 	IsPrivate    bool   `json:"isPrivate"`
+	Password     string `json:"password,omitempty"`
 	IsMasterOnly bool   `json:"isMasterOnly"`
 }
 
@@ -94,6 +97,16 @@ func CreateRoom(c *gin.Context) {
 		return
 	}
 
+	if body.RoomDetails.IsPrivate {
+		password := strings.TrimSpace(body.RoomDetails.Password)
+		if len(password) < 8 {
+			c.JSON(400, gin.H{
+				"error": "Password is required for private rooms and must be at least 8 characters long",
+			})
+			return
+		}
+	}
+
 	roomId := utils.GenerateSecureID(5)
 
 	newRoom := structs.Room{
@@ -102,6 +115,7 @@ func CreateRoom(c *gin.Context) {
 		RoomId:       roomId,
 		Limit:        body.RoomDetails.Limit,
 		IsPrivate:    body.RoomDetails.IsPrivate,
+		Password:     body.RoomDetails.Password,
 		IsMasterOnly: body.RoomDetails.IsMasterOnly,
 		Songs:        []structs.Song{},
 		Clients:      []structs.RoomUser{},
@@ -110,8 +124,11 @@ func CreateRoom(c *gin.Context) {
 	myredis.RDB.Set(ctx, "room:"+roomId, data, 0)
 	myredis.RDB.SAdd(ctx, "rooms", newRoom.RoomId)
 
+	// Publish new room event with password omitted for safety
+	publicNewRoom := newRoom
+	publicNewRoom.Password = ""
 	myredis.PublishJSON(ctx, "new-room", structs.NewRoomReq{
-		Room: newRoom,
+		Room: publicNewRoom,
 	})
 
 	c.JSON(201, gin.H{

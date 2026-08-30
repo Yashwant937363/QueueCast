@@ -1,19 +1,47 @@
 import { motion, AnimatePresence } from "motion/react";
 import { X, Download, Share2, Copy } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
-import { useRef } from "react";
+import { useRef, useEffect, useState } from "react";
 import { notify } from "../../utils/notify";
+import { encryptPasswordForUrl } from "../../utils/crypto";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   roomName?: string;
+  roomId?: string;
+  isPrivate?: boolean;
+  roomPassword?: string;
 };
 
-export default function QRCodeModal({ open, onClose, roomName }: Props) {
+export default function QRCodeModal({
+  open,
+  onClose,
+  roomName,
+  roomId,
+  isPrivate,
+  roomPassword,
+}: Props) {
   const qrRef = useRef<HTMLDivElement>(null);
+  const [roomUrl, setRoomUrl] = useState<string>(window.location.href);
 
-  const roomUrl = window.location.href;
+  useEffect(() => {
+    const generateUrl = async () => {
+      const baseUrl = `${window.location.origin}/room/${roomId || ""}`;
+      if (isPrivate && roomPassword) {
+        const encryptedPass = await encryptPasswordForUrl(roomPassword);
+        if (encryptedPass) {
+          setRoomUrl(`${baseUrl}?pass=${encodeURIComponent(encryptedPass)}`);
+          return;
+        }
+      }
+      setRoomUrl(baseUrl);
+    };
+
+    if (open) {
+      generateUrl();
+    }
+  }, [open, isPrivate, roomPassword, roomId]);
 
   const downloadQR = () => {
     const canvas = qrRef.current?.querySelector("canvas");

@@ -6,6 +6,7 @@ export interface Room {
   roomId: string;
   limit: number;
   isPrivate: boolean;
+  password?: string;
   isMasterOnly: boolean;
   songs: Song[];
   clients: RoomUser[];

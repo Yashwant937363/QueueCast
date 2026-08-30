@@ -8,6 +8,7 @@ import (
 
 	"github.com/Yashwant937363/QueueCast/backend/database/myredis"
 	"github.com/Yashwant937363/QueueCast/backend/structs"
+	"github.com/Yashwant937363/QueueCast/backend/utils"
 	"github.com/gorilla/websocket"
 )
 
@@ -25,6 +26,15 @@ func joinRoom(conn *websocket.Conn, msg structs.WSMessage) {
 	if err != nil {
 		SendError(Clients[conn], "Join Room", "Room Doesn't Exist", "", "")
 		return
+	}
+
+	// Password validation for private rooms (skip if owner is joining)
+	if room.IsPrivate && req.Auth0Id != room.Owner.Auth0Id {
+		providedPassword, decErr := utils.DecryptPassword(req.Password)
+		if decErr != nil || strings.TrimSpace(providedPassword) != strings.TrimSpace(room.Password) {
+			SendError(Clients[conn], "Join Room", "Invalid or missing room password", "invalid-password", req.RoomId)
+			return
+		}
 	}
 
 	if req.PrevGuestId != "" && strings.HasPrefix(req.PrevGuestId, "guest_") {
@@ -99,11 +109,17 @@ func joinRoom(conn *websocket.Conn, msg structs.WSMessage) {
 		},
 	})
 
+	// Scrub room password if current user is not the room owner
+	clientRoom := room
+	if req.Auth0Id != room.Owner.Auth0Id {
+		clientRoom.Password = ""
+	}
+
 	SendEvent(
 		Clients[conn],
 		"room-joined",
 		map[string]any{
-			"room":    room,
+			"room":    clientRoom,
 			"message": "room-joined",
 		},
 	)

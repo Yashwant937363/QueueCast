@@ -15,6 +15,7 @@ type JoinRoomMessage struct {
 	Auth0Id     string `json:"auth0Id"`
 	PrevGuestId string `json:"prevGuestId,omitempty"`
 	RoomId      string `json:"roomId"`
+	Password    string `json:"password,omitempty"`
 	Username    string `json:"username"`
 	Picture     string `json:"picture"`
 }

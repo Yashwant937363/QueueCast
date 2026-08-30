@@ -14,6 +14,7 @@ interface JoinRoomReq {
   roomId: string;
   auth0Id: string;
   prevGuestId?: string;
+  password?: string;
   username: string;
   picture: string;
 }
@@ -29,6 +30,7 @@ export function joinRoom(req: JoinRoomReq) {
     auth0Id: req.auth0Id,
     prevGuestId: req.prevGuestId,
     roomId: req.roomId,
+    password: req.password,
     username: req.username,
     picture: req.picture,
   });

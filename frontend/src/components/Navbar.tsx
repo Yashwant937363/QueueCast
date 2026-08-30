@@ -217,7 +217,13 @@ const Navbar: React.FC = () => {
         const data: ErrorMessage = JSON.parse(event.data);
         console.log("WS Error From Server: ", data.message);
         notify("error", data.message.title, data.message.message);
-        if (data.message.event === Events.AddSong) {
+        if (data.message.event === "invalid-password") {
+          window.dispatchEvent(
+            new CustomEvent("room-join-password-required", {
+              detail: data.message,
+            }),
+          );
+        } else if (data.message.event === Events.AddSong) {
           dispatch(removeSongFromWaiting(data.message.data.id));
         } else if (data.message.event === Events.NextSong) {
           dispatch(setLoading(false));

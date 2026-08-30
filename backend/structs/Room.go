@@ -30,6 +30,7 @@ type Room struct {
 	RoomId       string     `json:"roomId"`
 	Limit        int        `json:"limit"`
 	IsPrivate    bool       `json:"isPrivate"`
+	Password     string     `json:"password,omitempty"`
 	IsMasterOnly bool       `json:"isMasterOnly"`
 	Songs        []Song     `json:"songs"`
 	Clients      []RoomUser `json:"clients"`

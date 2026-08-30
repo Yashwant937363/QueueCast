@@ -6,19 +6,40 @@ import { joinRoom } from "../../socket/socket";
 
 import { notify } from "../../utils/notify";
 
+import PasswordPromptModal from "../room/PasswordPromptModal";
+
 const JoinRoom = () => {
   const [roomId, setRoomId] = useState("");
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const { auth0Id, picture, username } = useAppSelector((state) => state.user);
+  const publicRooms = useAppSelector((state) => state.rooms.publicRooms);
+
   const handleJoinRoom = () => {
     if (roomId.trim() === "") {
       notify("warning", "Missing Room Id", "");
       return;
     }
-    console.log("calling join room");
+
+    const matchedRoom = publicRooms.find((r) => r.roomId === roomId.trim());
+    if (matchedRoom?.isPrivate) {
+      setShowPasswordModal(true);
+    } else {
+      joinRoom({
+        auth0Id,
+        picture,
+        roomId: roomId.trim(),
+        username,
+      });
+    }
+  };
+
+  const handlePasswordSubmit = (password: string) => {
+    setShowPasswordModal(false);
     joinRoom({
       auth0Id,
       picture,
-      roomId,
+      roomId: roomId.trim(),
+      password,
       username,
     });
   };
@@ -72,6 +93,13 @@ const JoinRoom = () => {
       >
         Join Room
       </motion.button>
+
+      <PasswordPromptModal
+        open={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        onConfirm={handlePasswordSubmit}
+        roomName={roomId}
+      />
     </div>
   );
 };
