@@ -26,9 +26,8 @@ func main() {
 		log.Fatalf("failed to create jwt validator: %v", err)
 	}
 
-	enverr := godotenv.Load()
-	if enverr != nil {
-		log.Fatalf("error while loading env file")
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, using system environment variables")
 	}
 	r := gin.Default()
 
