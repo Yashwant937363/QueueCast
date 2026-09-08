@@ -2,6 +2,7 @@ package myredis
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -15,14 +16,20 @@ var RDB *redis.Client
 
 func ConnectRedis() error {
 	RDB = redis.NewClient(&redis.Options{
-		Addr: os.Getenv("REDIS_URL"),
+		Addr:      "intent-locust-132939.upstash.io:6379",
+		Username:  "default",
+		Password:  os.Getenv("REDIS_PASSWORD"),
+		TLSConfig: &tls.Config{},
 	})
+
 	pong, err := RDB.Ping(ctx).Result()
 	if err != nil {
-		fmt.Printf("Could not connect to Redis: %v", err)
+		fmt.Printf("Could not connect to Redis: %v\n", err)
 		return err
 	}
+
 	fmt.Printf("Connected successfully to Redis! Ping response: %s\n", pong)
+
 	return nil
 }
 
