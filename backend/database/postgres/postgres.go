@@ -18,14 +18,7 @@ func ConnectDB() error {
 		fmt.Println("error while loading env file")
 	}
 
-	connString := fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_NAME"),
-	)
+	connString := os.Getenv("DATABASE_URL")
 
 	DB, err = pgxpool.New(context.Background(), connString)
 	if err != nil {
