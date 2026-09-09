@@ -17,7 +17,8 @@ const CreateRoom: React.FC = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [userLimit, setUserLimit] = useState(20);
-  const [playbackMode, setPlaybackMode] = useState("master");
+  // const [playbackMode, setPlaybackMode] = useState("master");
+  const playbackMode = "master"; // Hardcoded for now, as the playback mode feature is not yet implemented
   const { auth0Id, picture, username } = useAppSelector((state) => state.user);
   const { getAccessTokenSilently } = useAuth0();
   const navigate = useNavigate();
@@ -27,7 +28,9 @@ const CreateRoom: React.FC = () => {
       return;
     }
     if (isPrivate && password.trim().length < 8) {
-      alert("Password is required for private rooms and must be at least 8 characters long");
+      alert(
+        "Password is required for private rooms and must be at least 8 characters long",
+      );
       return;
     }
     const token = await getAccessTokenSilently({
@@ -204,8 +207,8 @@ const CreateRoom: React.FC = () => {
             <option value={100}>100</option>
           </select>
         </div>
-
-        <div>
+        {/* commit this util we build this */}
+        {/* <div>
           <label className="block mb-2 text-sm text-slate-400">
             Playback Mode
           </label>
@@ -229,7 +232,7 @@ const CreateRoom: React.FC = () => {
               All Devices
             </label>
           </div>
-        </div>
+        </div> */}
 
         <motion.button
           onClick={handleCreateRoom}
