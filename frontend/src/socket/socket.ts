@@ -2,9 +2,9 @@ import Events from "../enums/Event";
 import type { Song } from "../types/Song";
 import sendMessage from "./sendEvent";
 
-const SERVER_DOMAIN = import.meta.env.VITE_API_SERVER_DOMAIN;
+const WS_URL = import.meta.env.VITE_WS_URL;
 
-export const socket = new WebSocket(`ws://${SERVER_DOMAIN}/ws`);
+export const socket = new WebSocket(WS_URL);
 
 socket.onopen = () => {
   console.log("Connected");
