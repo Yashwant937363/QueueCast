@@ -16,7 +16,7 @@ import (
 func NewValidator() (*validator.Validator, error) {
 	enverr := godotenv.Load()
 	if enverr != nil {
-		fmt.Println("error while loading env file")
+		fmt.Println("Auth0: error while loading env file")
 	}
 	issuerURL, err := url.Parse(os.Getenv("AUTH0_DOMAIN"))
 	if err != nil {

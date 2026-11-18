@@ -29,6 +29,13 @@ func GetRooms(c *gin.Context) {
 		return
 	}
 
+	if len(roomIds) == 0 {
+		c.JSON(200, gin.H{
+			"rooms": []structs.Room{},
+		})
+		return
+	}
+
 	keys := make([]string, 0, len(roomIds))
 
 	for _, roomId := range roomIds {

@@ -15,7 +15,7 @@ func ConnectDB() error {
 	var err error
 	enverr := godotenv.Load()
 	if enverr != nil {
-		fmt.Println("error while loading env file")
+		fmt.Println("Postgres: error while loading env file")
 	}
 
 	connString := os.Getenv("DATABASE_URL")
