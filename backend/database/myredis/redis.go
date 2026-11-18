@@ -2,7 +2,6 @@ package myredis
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -15,12 +14,14 @@ var ctx = context.Background()
 var RDB *redis.Client
 
 func ConnectRedis() error {
-	RDB = redis.NewClient(&redis.Options{
-		Addr:      "intent-locust-132939.upstash.io:6379",
-		Username:  "default",
-		Password:  os.Getenv("REDIS_PASSWORD"),
-		TLSConfig: &tls.Config{},
-	})
+	redisURL := os.Getenv("REDIS_URL")
+
+	opt, err := redis.ParseURL(redisURL)
+	if err != nil {
+		return fmt.Errorf("invalid Redis URL: %w", err)
+	}
+
+	RDB = redis.NewClient(opt)
 
 	pong, err := RDB.Ping(ctx).Result()
 	if err != nil {

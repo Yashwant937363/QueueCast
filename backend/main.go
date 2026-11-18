@@ -31,11 +31,13 @@ func main() {
 	}
 	r := gin.Default()
 
-	fmt.Println(os.Getenv("FRONTEND_URL"))
-
+	frontendUrl := os.Getenv("FRONTEND_URL")
+	if frontendUrl == "" {
+		log.Fatal("Frontend Url is not configured properly")
+	}
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
-			os.Getenv("FRONTEND_URL"),
+			frontendUrl,
 		},
 		AllowMethods: []string{
 			"GET", "POST", "PUT", "DELETE", "OPTIONS",
